@@ -100,7 +100,8 @@ OUTLINE_SCRIPT_PLACEHOLDER
             var a = document.createElement('a');
             a.className = 'outline-item outline-l' + lvl;
             a.setAttribute('data-line', ln);
-            a.setAttribute('dir', 'auto');
+            var isRtl = h.getAttribute('dir') === 'rtl' || /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u0590-\u05FF]/.test(txt);
+            a.setAttribute('dir', isRtl ? 'rtl' : 'ltr');
             a.textContent = txt;
             a.addEventListener('click', function(e) {
                 e.preventDefault();

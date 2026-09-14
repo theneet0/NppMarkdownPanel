@@ -9,6 +9,7 @@ using Markdig;
 using Markdig.Renderers;
 using Markdig.Renderers.Html;
 using Markdig.Syntax;
+using Markdig.Syntax.Inlines;
 using Markdig.SyntaxHighlighting;
 using MarkdigWrapper.Markdig.YamlFrontMatter;
 using Ganss.Xss;
@@ -88,27 +89,133 @@ namespace MarkdigWrapper
             return result;
         }
 
+        private static bool IsRtlChar(char c)
+        {
+            return (c >= 0x0600 && c <= 0x06FF) || // Arabic / Persian / Urdu
+                   (c >= 0x0750 && c <= 0x077F) || // Arabic Supplement
+                   (c >= 0x08A0 && c <= 0x08FF) || // Arabic Extended-A
+                   (c >= 0xFB50 && c <= 0xFDFF) || // Arabic Presentation Forms-A
+                   (c >= 0xFE70 && c <= 0xFEFF) || // Arabic Presentation Forms-B
+                   (c >= 0x0590 && c <= 0x05FF);   // Hebrew
+        }
+
+        private static bool IsLtrChar(char c)
+        {
+            return (c >= 'A' && c <= 'Z') ||
+                   (c >= 'a' && c <= 'z') ||
+                   (c >= 0x00C0 && c <= 0x024F); // Latin
+        }
+
+        public static string DetectDirection(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return "ltr";
+
+            int rtlCount = 0;
+            int ltrCount = 0;
+            int firstStrong = 0; // 1 for RTL, -1 for LTR
+
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (IsRtlChar(c))
+                {
+                    rtlCount++;
+                    if (firstStrong == 0) firstStrong = 1;
+                }
+                else if (IsLtrChar(c))
+                {
+                    ltrCount++;
+                    if (firstStrong == 0) firstStrong = -1;
+                }
+            }
+
+            if (rtlCount == 0 && ltrCount == 0) return "ltr";
+            if (firstStrong == 1) return "rtl";
+            // If it starts with Latin/English words (e.g. "Notepad++ یک ویرایشگر عالی است")
+            // but the content is predominantly RTL:
+            if (rtlCount > ltrCount) return "rtl";
+
+            return "ltr";
+        }
+
+        private static string GetInlineText(ContainerInline container)
+        {
+            if (container == null) return string.Empty;
+            var sb = new StringBuilder();
+            var inline = container.FirstChild;
+            while (inline != null)
+            {
+                if (inline is LiteralInline literal)
+                {
+                    sb.Append(literal.Content.ToString());
+                }
+                else if (inline is CodeInline code)
+                {
+                    sb.Append(code.Content);
+                    var codeAttrs = code.GetAttributes();
+                    codeAttrs.AddPropertyIfNotExist("dir", "ltr");
+                    code.SetAttributes(codeAttrs);
+                }
+                else if (inline is ContainerInline childContainer)
+                {
+                    sb.Append(GetInlineText(childContainer));
+                }
+                inline = inline.NextSibling;
+            }
+            return sb.ToString();
+        }
+
+        private static string GetBlockText(Block block)
+        {
+            if (block == null || block is CodeBlock) return string.Empty;
+
+            if (block is LeafBlock leaf)
+            {
+                if (leaf.Inline != null)
+                {
+                    return GetInlineText(leaf.Inline);
+                }
+                return string.Empty;
+            }
+
+            if (block is ContainerBlock container)
+            {
+                var sb = new StringBuilder();
+                foreach (var child in container)
+                {
+                    sb.Append(GetBlockText(child));
+                    sb.Append(' ');
+                }
+                return sb.ToString();
+            }
+
+            return string.Empty;
+        }
+
         private void SetLineNoAttributeOnAllBlocks(ContainerBlock rootBlock)
         {
             foreach (var childBlock in rootBlock)
             {
-                if (childBlock is ContainerBlock)
+                if (childBlock is ContainerBlock containerBlock)
                 {
-                    SetLineNoAttributeOnAllBlocks(childBlock as ContainerBlock);
+                    SetLineNoAttributeOnAllBlocks(containerBlock);
                 }
+
                 var attributes = childBlock.GetAttributes();
                 attributes.AddProperty("data-line", childBlock.Line.ToString());
-                if (childBlock is CodeBlock)
+
+                if (childBlock is CodeBlock || childBlock.GetType().Name.Contains("Math"))
                 {
                     attributes.AddPropertyIfNotExist("dir", "ltr");
                 }
                 else
                 {
-                    attributes.AddPropertyIfNotExist("dir", "auto");
+                    string text = GetBlockText(childBlock);
+                    string dir = DetectDirection(text);
+                    attributes.AddPropertyIfNotExist("dir", dir);
                 }
                 childBlock.SetAttributes(attributes);
             }
-
         }
 
         private string UnescapeImageUris(string html)
