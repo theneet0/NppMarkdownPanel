@@ -1,15 +1,43 @@
-if (Test-Path Release\lib\) {Remove-Item Release\lib\ -Recurse -Force}
-New-Item "Release\lib\" -itemType Directory
-Copy-Item -Force -Recurse -Path MarkdigWrapper\bin\Release\*.dll -Destination Release\lib\
-Copy-Item -Force -Recurse -Path PanelCommon\bin\Release\*.dll -Destination Release\lib\
-Copy-Item -Force -Recurse -Path Webview2Viewer\bin\Release\*.dll -Destination Release\lib\
-Copy-Item -Force -Recurse -Path Webview2Viewer\bin\Release\runtimes\ -Destination Release\lib\runtimes\
+# Release Packaging Script for NppMarkdownPanel
+$ErrorActionPreference = "Stop"
 
-function makeReleaseZip($filename, $targetPlattform)
-{
-	$zipName = "Release\NppMarkdownPanel-" + (Get-Item $filename).VersionInfo.FileVersion + "-" + $targetPlattform + ".zip"
-	Compress-Archive -LiteralPath $filename, 'Release\lib\', 'README.md', 'help\', 'License.txt', "NppMarkdownPanel\style.css" , "NppMarkdownPanel\style-dark.css" -DestinationPath $zipName -Force
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Set-Location $scriptDir
+
+$releaseDir = Join-Path $scriptDir "Release"
+if (Test-Path $releaseDir) { Remove-Item -Recurse -Force $releaseDir }
+New-Item -ItemType Directory -Path $releaseDir | Out-Null
+
+$version = "1.0.0"
+
+# Package x64
+$x64Dll = Join-Path $scriptDir "bin\NppMarkdownPanel.dll"
+if (Test-Path $x64Dll) {
+    $zipX64 = Join-Path $releaseDir "NppMarkdownPanel-$version-x64.zip"
+    $stageDir64 = Join-Path $releaseDir "stage_x64\NppMarkdownPanel"
+    New-Item -ItemType Directory -Path $stageDir64 -Force | Out-Null
+    Copy-Item $x64Dll -Destination (Join-Path $stageDir64 "NppMarkdownPanel.dll")
+    Copy-Item (Join-Path $scriptDir "README.md") -Destination $stageDir64
+    Copy-Item (Join-Path $scriptDir "License.txt") -Destination $stageDir64
+
+    Compress-Archive -Path "$stageDir64" -DestinationPath $zipX64 -Force
+    Remove-Item -Recurse -Force (Join-Path $releaseDir "stage_x64")
+    Write-Host "Created Release Archive: $zipX64 ($( (Get-Item $zipX64).Length / 1KB ) KB)" -ForegroundColor Green
 }
 
-makeReleaseZip "NppMarkdownPanel\bin\Release\NppMarkdownPanel.dll" "x86"
-makeReleaseZip "NppMarkdownPanel\bin\Release-x64\NppMarkdownPanel.dll" "x64"
+# Package x86
+$x86Dll = Join-Path $scriptDir "bin\x86\NppMarkdownPanel.dll"
+if (Test-Path $x86Dll) {
+    $zipX86 = Join-Path $releaseDir "NppMarkdownPanel-$version-x86.zip"
+    $stageDir86 = Join-Path $releaseDir "stage_x86\NppMarkdownPanel"
+    New-Item -ItemType Directory -Path $stageDir86 -Force | Out-Null
+    Copy-Item $x86Dll -Destination (Join-Path $stageDir86 "NppMarkdownPanel.dll")
+    Copy-Item (Join-Path $scriptDir "README.md") -Destination $stageDir86
+    Copy-Item (Join-Path $scriptDir "License.txt") -Destination $stageDir86
+
+    Compress-Archive -Path "$stageDir86" -DestinationPath $zipX86 -Force
+    Remove-Item -Recurse -Force (Join-Path $releaseDir "stage_x86")
+    Write-Host "Created Release Archive: $zipX86 ($( (Get-Item $zipX86).Length / 1KB ) KB)" -ForegroundColor Green
+}
+
+Write-Host "[SUCCESS] Release packages created in $releaseDir" -ForegroundColor Cyan
