@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,6 +24,7 @@ namespace MarkdigWrapper
             htmlSanitizer.AllowedAttributes.Add("data-line");
             htmlSanitizer.AllowedAttributes.Add("class");
             htmlSanitizer.AllowedAttributes.Add("id");
+            htmlSanitizer.AllowedAttributes.Add("dir");
             htmlSanitizer.AllowedSchemes.Add("file");
         }
 
@@ -97,6 +98,14 @@ namespace MarkdigWrapper
                 }
                 var attributes = childBlock.GetAttributes();
                 attributes.AddProperty("data-line", childBlock.Line.ToString());
+                if (childBlock is CodeBlock)
+                {
+                    attributes.AddPropertyIfNotExist("dir", "ltr");
+                }
+                else
+                {
+                    attributes.AddPropertyIfNotExist("dir", "auto");
+                }
                 childBlock.SetAttributes(attributes);
             }
 

@@ -1,4 +1,4 @@
-﻿using NppMarkdownPanel.Entities;
+using NppMarkdownPanel.Entities;
 using NppMarkdownPanel.Generator;
 using NppMarkdownPanel.Webbrowser;
 using PanelCommon;
@@ -100,6 +100,7 @@ OUTLINE_SCRIPT_PLACEHOLDER
             var a = document.createElement('a');
             a.className = 'outline-item outline-l' + lvl;
             a.setAttribute('data-line', ln);
+            a.setAttribute('dir', 'auto');
             a.textContent = txt;
             a.addEventListener('click', function(e) {
                 e.preventDefault();
