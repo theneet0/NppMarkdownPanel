@@ -173,6 +173,13 @@ __declspec(dllexport) FuncItem * getFuncsArray(int *nbF) {
     return g_funcItems;
 }
 
+int GetPluginCmdId(int index) {
+    if (index >= 0 && index < NB_PLUGIN_COMMANDS) {
+        return g_funcItems[index]._cmdID;
+    }
+    return -1;
+}
+
 __declspec(dllexport) void beNotified(SCNotification *notifyCode) {
     if (!notifyCode) return;
 
@@ -185,6 +192,10 @@ __declspec(dllexport) void beNotified(SCNotification *notifyCode) {
             SendMessage(g_nppData._nppHandle, NPPM_ADDTOOLBARICON, (WPARAM)g_funcItems[CMD_TOGGLE_PANEL]._cmdID, (LPARAM)&tbIcons);
             break;
         }
+
+        case NPPN_READY:
+            NppMarkdownPanel::Instance().OnNppReady();
+            break;
 
         case NPPN_DARKMODECHANGED:
             NppMarkdownPanel::Instance().OnDarkModeChanged();

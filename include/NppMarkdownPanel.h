@@ -29,10 +29,14 @@ public:
     void ShowAbout();
 
     // Notepad++ Notifications
+    void OnNppReady();
     void OnNotification(SCNotification* notifyCode);
     void OnDarkModeChanged();
     void OnBufferActivated();
     void OnDocModified();
+
+    void EnsurePanelRegistered();
+    bool IsNppReady() const noexcept { return m_isNppReady; }
 
     HWND GetPanelHwnd() const noexcept { return m_hPanel; }
     tTbData* GetTbData() noexcept { return &m_tbData; }
@@ -69,8 +73,11 @@ private:
     OutlineView m_outlineView;
     MarkdownDocument m_currentDoc;
 
+    bool m_isNppReady = false;
     bool m_isPanelRegistered = false;
     bool m_isPanelVisible = false;
     bool m_isRenderPending = false;
     std::wstring m_lastRawContent;
 };
+
+extern "C" int GetPluginCmdId(int index);

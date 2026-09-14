@@ -3,6 +3,28 @@
 #include "Notepad_plus_msgs.h"
 #include "Scintilla.h"
 
+struct NppData {
+    HWND _nppHandle;
+    HWND _scintillaMainHandle;
+    HWND _scintillaSecondHandle;
+};
+
+struct NppDarkModeColors {
+    COLORREF background;
+    COLORREF softerBackground;
+    COLORREF hotBackground;
+    COLORREF pureBackground;
+    COLORREF errorBackground;
+    COLORREF text;
+    COLORREF darkerText;
+    COLORREF disabledText;
+    COLORREF edge;
+    COLORREF linkText;
+};
+
+#define IDM_VIEW_RTL                   44072
+#define IDM_VIEW_LTR                   44073
+
 typedef void (*PFUNCPLUGINCMD)();
 
 struct ShortcutKey {

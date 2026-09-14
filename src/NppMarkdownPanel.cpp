@@ -10,6 +10,22 @@
 namespace {
 const wchar_t* s_panelClassName = L"NppMarkdownPanelWindowClass";
 const wchar_t* s_renderCanvasClassName = L"NppMarkdownCanvasWindowClass";
+
+#ifdef _DEBUG
+void NppLog(const char* fmt, ...) {
+    FILE* f = fopen("C:\\Users\\Joestar\\.gemini\\antigravity\\scratch\\super-reasoner\\npp_debug.log", "a");
+    if (!f) return;
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(f, fmt, args);
+    va_end(args);
+    fprintf(f, "\n");
+    fflush(f);
+    fclose(f);
+}
+#else
+inline void NppLog(const char*, ...) {}
+#endif
 }
 
 NppMarkdownPanel& NppMarkdownPanel::Instance() {
@@ -23,21 +39,55 @@ void NppMarkdownPanel::Init(HINSTANCE hInst, NppData nppData) {
 
     // Load config path from Notepad++ plugin config directory
     wchar_t configDir[MAX_PATH] = { 0 };
-    SendMessage(m_nppData._nppHandle, NPPM_GETPLUGINSCONFIGDIR, MAX_PATH, (LPARAM)configDir);
+    if (m_nppData._nppHandle) {
+        SendMessage(m_nppData._nppHandle, NPPM_GETPLUGINSCONFIGDIR, MAX_PATH, (LPARAM)configDir);
+    }
+    if (configDir[0] == L'\0') {
+        GetTempPathW(MAX_PATH, configDir);
+    }
     m_configPath = std::wstring(configDir) + L"\\NppMarkdownPanel.ini";
     m_config.Load(m_configPath);
 
+    // CRITICAL: We do NOT call CreatePanelWindow() or send NPPM_DMMREGASDCKDLG here!
+    // Docking registration must only occur on NPPN_READY or on-demand, after Notepad++
+    // has completed its main window creation, pluginsManager initialization, and getFuncsArray.
+}
+
+void NppMarkdownPanel::OnNppReady() {
+    m_isNppReady = true;
+
+    // Synchronize initial menu check states using allocated command IDs
+    int cmdCaret = GetPluginCmdId(CMD_SYNC_CARET);
+    if (cmdCaret > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdCaret, (LPARAM)(m_config.syncWithCaret ? TRUE : FALSE));
+    int cmdFirst = GetPluginCmdId(CMD_SYNC_FIRST_LINE);
+    if (cmdFirst > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdFirst, (LPARAM)(m_config.syncWithFirstLine ? TRUE : FALSE));
+    int cmdOutline = GetPluginCmdId(CMD_TOGGLE_OUTLINE);
+    if (cmdOutline > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdOutline, (LPARAM)(m_config.showOutline ? TRUE : FALSE));
+    int cmdBiDi = GetPluginCmdId(CMD_TOGGLE_BIDI);
+    if (cmdBiDi > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdBiDi, (LPARAM)(m_config.isSmartBiDiEnabled ? TRUE : FALSE));
+}
+
+void NppMarkdownPanel::EnsurePanelRegistered() {
+    NppLog("EnsurePanelRegistered() called, registered=%d", (int)m_isPanelRegistered);
+    if (m_isPanelRegistered) return;
     CreatePanelWindow();
+    NppLog("EnsurePanelRegistered() finished, registered=%d", (int)m_isPanelRegistered);
 }
 
 void NppMarkdownPanel::Cleanup() {
     m_config.Save(m_configPath);
     if (m_hPanel && IsWindow(m_hPanel)) {
         DestroyWindow(m_hPanel);
+        m_hPanel = nullptr;
     }
 }
 
 bool NppMarkdownPanel::CreatePanelWindow() {
+    NppLog("CreatePanelWindow() start");
+    if (m_isPanelRegistered && m_hPanel && IsWindow(m_hPanel)) {
+        return true;
+    }
+
     WNDCLASSEX wc = { sizeof(WNDCLASSEX) };
     wc.lpfnWndProc = PanelWndProc;
     wc.hInstance = m_hInst;
@@ -45,9 +95,10 @@ bool NppMarkdownPanel::CreatePanelWindow() {
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
     wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
     RegisterClassEx(&wc);
+    NppLog("RegisterClassEx completed");
 
     m_hPanel = CreateWindowEx(
-        0,
+        WS_EX_CONTROLPARENT,
         s_panelClassName,
         L"Markdown Panel",
         WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
@@ -58,11 +109,32 @@ bool NppMarkdownPanel::CreatePanelWindow() {
         this
     );
 
+    NppLog("CreateWindowEx completed, m_hPanel=0x%p", m_hPanel);
     if (!m_hPanel) return false;
 
-    // Initialize Direct2D Renderer
+    // Setup docking data and register with Notepad++ FIRST
+    // Notepad++ reparents m_hPanel to IDC_CLIENT_TAB and sets WS_CHILD.
+    // This must occur before Direct2D render targets or child controls are created.
+    m_tbData.hClient = m_hPanel;
+    m_tbData.pszName = L"Markdown Panel";
+    m_tbData.dlgID = CMD_TOGGLE_PANEL;
+    m_tbData.uMask = DWS_DF_CONT_RIGHT | DWS_USEOWNDARKMODE;
+    m_tbData.hIconTab = nullptr;
+    m_tbData.pszAddInfo = nullptr;
+    m_tbData.rcFloat = { 0, 0, 0, 0 };
+    m_tbData.iPrevCont = -1;
+    m_tbData.pszModuleName = L"NppMarkdownPanel.dll";
+
+    NppLog("Sending NPPM_DMMREGASDCKDLG, nppHandle=0x%p, tbData.hClient=0x%p", m_nppData._nppHandle, m_tbData.hClient);
+    SendMessage(m_nppData._nppHandle, NPPM_DMMREGASDCKDLG, 0, (LPARAM)&m_tbData);
+    NppLog("NPPM_DMMREGASDCKDLG returned successfully");
+    m_isPanelRegistered = true;
+
+    // Initialize Direct2D Renderer now that window is docked
+    NppLog("Initializing Direct2D Renderer");
     m_renderer.Initialize(m_hPanel);
     m_renderer.SetZoom(m_config.zoomLevel);
+    NppLog("Direct2D Renderer initialized");
 
     // Dark mode check from Notepad++
     bool isNppDark = SendMessage(m_nppData._nppHandle, NPPM_ISDARKMODEENABLED, 0, 0) != 0;
@@ -73,6 +145,7 @@ bool NppMarkdownPanel::CreatePanelWindow() {
     }
 
     // Initialize Outline View
+    NppLog("Initializing Outline View");
     m_outlineView.Create(m_hPanel, m_hInst);
     m_outlineView.SetDarkMode(m_renderer.IsDarkMode());
     m_outlineView.SetCallback([](int line, void* userData) {
@@ -81,21 +154,7 @@ bool NppMarkdownPanel::CreatePanelWindow() {
             panel->m_renderer.ScrollToSourceLine(line);
         }
     }, this);
-
-    // Setup docking data
-    m_tbData.hClient = m_hPanel;
-    m_tbData.pszName = L"Markdown Panel";
-    m_tbData.dlgID = CMD_TOGGLE_PANEL;
-    m_tbData.uMask = DWS_DF_CONT_RIGHT | DWS_ICONTAB | DWS_ADDINFO;
-    m_tbData.hIconTab = LoadIcon(m_hInst, MAKEINTRESOURCE(IDI_ICON_PANEL));
-    m_tbData.pszAddInfo = L"";
-    m_tbData.rcFloat = { 0, 0, 450, 700 };
-    m_tbData.iPrevCont = CONT_RIGHT;
-    m_tbData.pszModuleName = L"NppMarkdownPanel.dll";
-
-    // Register docking dialog with Notepad++
-    SendMessage(m_nppData._nppHandle, NPPM_DMMREGASDCKDLG, 0, (LPARAM)&m_tbData);
-    m_isPanelRegistered = true;
+    NppLog("Outline View initialized");
 
     // Create modern toolbar controls inside panel
     int btnX = 6;
@@ -166,39 +225,68 @@ bool NppMarkdownPanel::IsCurrentBufferMarkdown() const {
 }
 
 void NppMarkdownPanel::TogglePanel() {
-    m_isPanelVisible = !m_isPanelVisible;
+    NppLog("TogglePanel() enter, current isVisible=%d", (int)m_isPanelVisible);
+    bool wasRegistered = m_isPanelRegistered;
+    EnsurePanelRegistered();
+    NppLog("TogglePanel() after EnsurePanelRegistered, m_hPanel=0x%p", m_hPanel);
+
+    if (!wasRegistered) {
+        m_isPanelVisible = true;
+    } else {
+        m_isPanelVisible = !m_isPanelVisible;
+    }
+
+    NppLog("TogglePanel() sending NPPM_DMMSHOW/HIDE: %s", m_isPanelVisible ? "NPPM_DMMSHOW" : "NPPM_DMMHIDE");
     SendMessage(m_nppData._nppHandle, m_isPanelVisible ? NPPM_DMMSHOW : NPPM_DMMHIDE, 0, (LPARAM)m_hPanel);
-    SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, CMD_TOGGLE_PANEL, m_isPanelVisible ? TRUE : FALSE);
+    NppLog("TogglePanel() NPPM_DMMSHOW/HIDE returned");
+
+    int cmdId = GetPluginCmdId(CMD_TOGGLE_PANEL);
+    if (cmdId > 0) {
+        SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdId, (LPARAM)(m_isPanelVisible ? TRUE : FALSE));
+    }
 
     if (m_isPanelVisible) {
+        NppLog("TogglePanel() calling ExecuteRender");
+        m_lastRawContent.clear();
         ExecuteRender();
+        NppLog("TogglePanel() ExecuteRender returned");
     }
+    NppLog("TogglePanel() exit");
 }
 
 void NppMarkdownPanel::ToggleSyncWithCaret() {
     m_config.syncWithCaret = !m_config.syncWithCaret;
     if (m_config.syncWithCaret) m_config.syncWithFirstLine = false;
-    SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, CMD_SYNC_CARET, m_config.syncWithCaret ? TRUE : FALSE);
-    SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, CMD_SYNC_FIRST_LINE, FALSE);
-    SendMessage(GetDlgItem(m_hPanel, IDC_BTN_SYNC_TOGGLE), BM_SETCHECK, m_config.syncWithCaret ? BST_CHECKED : BST_UNCHECKED, 0);
+    int cmdCaret = GetPluginCmdId(CMD_SYNC_CARET);
+    int cmdFirst = GetPluginCmdId(CMD_SYNC_FIRST_LINE);
+    if (cmdCaret > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdCaret, (LPARAM)(m_config.syncWithCaret ? TRUE : FALSE));
+    if (cmdFirst > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdFirst, FALSE);
+    if (m_hPanel) {
+        SendMessage(GetDlgItem(m_hPanel, IDC_BTN_SYNC_TOGGLE), BM_SETCHECK, m_config.syncWithCaret ? BST_CHECKED : BST_UNCHECKED, 0);
+    }
 }
 
 void NppMarkdownPanel::ToggleSyncWithFirstLine() {
     m_config.syncWithFirstLine = !m_config.syncWithFirstLine;
     if (m_config.syncWithFirstLine) m_config.syncWithCaret = false;
-    SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, CMD_SYNC_FIRST_LINE, m_config.syncWithFirstLine ? TRUE : FALSE);
-    SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, CMD_SYNC_CARET, FALSE);
+    int cmdFirst = GetPluginCmdId(CMD_SYNC_FIRST_LINE);
+    int cmdCaret = GetPluginCmdId(CMD_SYNC_CARET);
+    if (cmdFirst > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdFirst, (LPARAM)(m_config.syncWithFirstLine ? TRUE : FALSE));
+    if (cmdCaret > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdCaret, FALSE);
 }
 
 void NppMarkdownPanel::ToggleOutline() {
     m_config.showOutline = !m_config.showOutline;
     m_outlineView.Show(m_config.showOutline);
-    SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, CMD_TOGGLE_OUTLINE, m_config.showOutline ? TRUE : FALSE);
+    int cmdOutline = GetPluginCmdId(CMD_TOGGLE_OUTLINE);
+    if (cmdOutline > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdOutline, (LPARAM)(m_config.showOutline ? TRUE : FALSE));
 
     // Trigger window resize to arrange canvas and outline
-    RECT rc;
-    GetClientRect(m_hPanel, &rc);
-    SendMessage(m_hPanel, WM_SIZE, 0, MAKELPARAM(rc.right - rc.left, rc.bottom - rc.top));
+    if (m_hPanel) {
+        RECT rc;
+        GetClientRect(m_hPanel, &rc);
+        SendMessage(m_hPanel, WM_SIZE, 0, MAKELPARAM(rc.right - rc.left, rc.bottom - rc.top));
+    }
 }
 
 void NppMarkdownPanel::CopyRenderedHtml() {
@@ -225,25 +313,26 @@ void NppMarkdownPanel::ZoomIn() {
     m_config.zoomLevel += 0.1f;
     if (m_config.zoomLevel > 3.0f) m_config.zoomLevel = 3.0f;
     m_renderer.SetZoom(m_config.zoomLevel);
-    InvalidateRect(m_hPanel, nullptr, FALSE);
+    if (m_hPanel) InvalidateRect(m_hPanel, nullptr, FALSE);
 }
 
 void NppMarkdownPanel::ZoomOut() {
     m_config.zoomLevel -= 0.1f;
     if (m_config.zoomLevel < 0.4f) m_config.zoomLevel = 0.4f;
     m_renderer.SetZoom(m_config.zoomLevel);
-    InvalidateRect(m_hPanel, nullptr, FALSE);
+    if (m_hPanel) InvalidateRect(m_hPanel, nullptr, FALSE);
 }
 
 void NppMarkdownPanel::ZoomReset() {
     m_config.zoomLevel = 1.0f;
     m_renderer.SetZoom(m_config.zoomLevel);
-    InvalidateRect(m_hPanel, nullptr, FALSE);
+    if (m_hPanel) InvalidateRect(m_hPanel, nullptr, FALSE);
 }
 
 void NppMarkdownPanel::ToggleBiDi() {
     m_config.isSmartBiDiEnabled = !m_config.isSmartBiDiEnabled;
-    SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, CMD_TOGGLE_BIDI, m_config.isSmartBiDiEnabled ? TRUE : FALSE);
+    int cmdBiDi = GetPluginCmdId(CMD_TOGGLE_BIDI);
+    if (cmdBiDi > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdBiDi, (LPARAM)(m_config.isSmartBiDiEnabled ? TRUE : FALSE));
     ExecuteRender();
 }
 
@@ -337,14 +426,14 @@ void NppMarkdownPanel::ExecuteRender() {
 }
 
 void NppMarkdownPanel::OnNotification(SCNotification* notifyCode) {
-    if (!notifyCode) return;
+    if (!notifyCode || !m_isNppReady) return;
 
     if (notifyCode->nmhdr.code == SCN_MODIFIED) {
         if (notifyCode->modificationType & (SC_MOD_INSERTTEXT | SC_MOD_DELETETEXT)) {
             RequestRenderDebounced();
         }
     } else if (notifyCode->nmhdr.code == SCN_UPDATEUI) {
-        if (m_config.syncWithCaret || m_config.syncWithFirstLine) {
+        if (m_isPanelVisible && (m_config.syncWithCaret || m_config.syncWithFirstLine)) {
             HWND hSci = GetCurrentScintilla();
             if (hSci) {
                 int line = m_config.syncWithCaret ? GetScintillaCaretLine(hSci) : GetScintillaFirstVisibleLine(hSci);
@@ -355,16 +444,21 @@ void NppMarkdownPanel::OnNotification(SCNotification* notifyCode) {
 }
 
 void NppMarkdownPanel::OnDarkModeChanged() {
+    if (!m_isNppReady) return;
     bool isDark = SendMessage(m_nppData._nppHandle, NPPM_ISDARKMODEENABLED, 0, 0) != 0;
     if (m_config.darkModeOverride != -1) {
         isDark = (m_config.darkModeOverride == 1);
     }
     m_renderer.SetDarkMode(isDark);
     m_outlineView.SetDarkMode(isDark);
-    InvalidateRect(m_hPanel, nullptr, TRUE);
+    if (m_hPanel) {
+        InvalidateRect(m_hPanel, nullptr, TRUE);
+    }
 }
 
 void NppMarkdownPanel::OnBufferActivated() {
+    if (!m_isNppReady) return;
+
     if (m_config.autoShowForMarkdown) {
         bool isMd = IsCurrentBufferMarkdown();
         if (isMd && !m_isPanelVisible) {
@@ -392,7 +486,37 @@ LRESULT CALLBACK NppMarkdownPanel::PanelWndProc(HWND hwnd, UINT msg, WPARAM wPar
 
     if (!self) return DefWindowProc(hwnd, msg, wParam, lParam);
 
+    if (msg != WM_SETCURSOR && msg != WM_NCHITTEST && msg != WM_MOUSEMOVE) {
+        NppLog("PanelWndProc msg=0x%04X, wp=0x%p, lp=0x%p", msg, (void*)wParam, (void*)lParam);
+    }
+
     switch (msg) {
+        case WM_SHOWWINDOW: {
+            NppLog("PanelWndProc WM_SHOWWINDOW wp=%d", (int)wParam);
+            self->m_isPanelVisible = (wParam != FALSE);
+            int cmdId = GetPluginCmdId(CMD_TOGGLE_PANEL);
+            if (cmdId > 0) {
+                SendMessage(self->m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdId, (LPARAM)(self->m_isPanelVisible ? TRUE : FALSE));
+            }
+            if (self->m_isPanelVisible) {
+                self->m_lastRawContent.clear();
+                self->ExecuteRender();
+            }
+            return 0;
+        }
+
+        case WM_NOTIFY: {
+            NMHDR* pnm = reinterpret_cast<NMHDR*>(lParam);
+            if (pnm && pnm->code == DMN_CLOSE) {
+                self->m_isPanelVisible = false;
+                int cmdId = GetPluginCmdId(CMD_TOGGLE_PANEL);
+                if (cmdId > 0) {
+                    SendMessage(self->m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdId, FALSE);
+                }
+                return 0;
+            }
+            break;
+        }
         case WM_TIMER: {
             if (wParam == IDT_RENDER_DEBOUNCE) {
                 KillTimer(hwnd, IDT_RENDER_DEBOUNCE);
