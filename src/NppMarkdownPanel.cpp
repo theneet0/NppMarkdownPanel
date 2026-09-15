@@ -349,12 +349,14 @@ void NppMarkdownPanel::ShowSettings() {
 void NppMarkdownPanel::ShowAbout() {
     const wchar_t* aboutMsg =
         L"NppMarkdownPanel - Modern Native Edition (2026)\n"
-        L"Version 1.0.0 (x64 / x86 Pure C++26)\n\n"
+        L"Version 1.0.1 (x64 / x86 Pure C++26)\n\n"
         L"Ultra-lightweight Notepad++ Markdown preview panel.\n"
         L"Engine: Direct2D 1.1 + DirectWrite GPU Hardware Accelerated\n"
         L"Features:\n"
         L"  • Zero .NET / Zero Chromium Child Processes (RAM < 8 MB)\n"
         L"  • First-class Persian / RTL BiDi & Inline Code Isolation\n"
+        L"  • Persian Numerals in Ordered Lists & Vazirmatn Typography\n"
+        L"  • GitHub & Persian Alert Callouts ([!NOTE], [!نکته], etc.)\n"
         L"  • GFM Tables, Task Lists, Syntax Highlighting & Copy Button\n"
         L"  • Live Caret & Scrollbar Synchronization\n"
         L"  • Document Map / Outline (TOC) Navigation\n"
