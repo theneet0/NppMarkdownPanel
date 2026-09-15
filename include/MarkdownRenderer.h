@@ -20,10 +20,17 @@ struct RenderItem {
     D2D1_RECT_F checkboxRect = { 0, 0, 0, 0 };
     std::wstring codeLanguage;
     std::vector<std::wstring> codeLines;
+    std::vector<IDWriteTextLayout*> codeLineLayouts;
     D2D1_RECT_F copyBtnRect = { 0, 0, 0, 0 };
     bool isCopyBtnHovered = false;
+    bool isCopiedAnim = false;
     MarkdownTable table;
     std::vector<std::vector<IDWriteTextLayout*>> tableCellLayouts;
+
+    // Alert Callouts
+    AlertType alertType = AlertType::None;
+    std::wstring alertTitle;
+    IDWriteTextLayout* pAlertTitleLayout = nullptr;
 };
 
 struct ClickableLink {
@@ -97,6 +104,7 @@ private:
     IDWriteTextFormat* m_pFormatTable = nullptr;
     IDWriteTextFormat* m_pFormatTableHeader = nullptr;
     IDWriteTextFormat* m_pFormatBadge = nullptr;
+    IDWriteTextFormat* m_pFormatAlertTitle = nullptr;
 
     // Color Brushes
     ID2D1SolidColorBrush* m_pBrushBg = nullptr;
@@ -124,4 +132,21 @@ private:
     ID2D1SolidColorBrush* m_pBrushCheckboxCheck = nullptr;
     ID2D1SolidColorBrush* m_pBrushBtnBg = nullptr;
     ID2D1SolidColorBrush* m_pBrushBtnHover = nullptr;
+
+    // Alert Callout Brushes
+    ID2D1SolidColorBrush* m_pBrushAlertNoteBg = nullptr;
+    ID2D1SolidColorBrush* m_pBrushAlertNoteBar = nullptr;
+    ID2D1SolidColorBrush* m_pBrushAlertTipBg = nullptr;
+    ID2D1SolidColorBrush* m_pBrushAlertTipBar = nullptr;
+    ID2D1SolidColorBrush* m_pBrushAlertImportantBg = nullptr;
+    ID2D1SolidColorBrush* m_pBrushAlertImportantBar = nullptr;
+    ID2D1SolidColorBrush* m_pBrushAlertWarningBg = nullptr;
+    ID2D1SolidColorBrush* m_pBrushAlertWarningBar = nullptr;
+    ID2D1SolidColorBrush* m_pBrushAlertCautionBg = nullptr;
+    ID2D1SolidColorBrush* m_pBrushAlertCautionBar = nullptr;
+    ID2D1SolidColorBrush* m_pBrushHighlightBg = nullptr;
+    ID2D1SolidColorBrush* m_pBrushInlineCodeBg = nullptr;
+    ID2D1SolidColorBrush* m_pBrushMacClose = nullptr;
+    ID2D1SolidColorBrush* m_pBrushMacMin = nullptr;
+    ID2D1SolidColorBrush* m_pBrushMacMax = nullptr;
 };

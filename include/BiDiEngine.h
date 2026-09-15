@@ -16,6 +16,10 @@ public:
     static bool IsNeutralChar(wchar_t ch) noexcept;
     static bool IsPersianDigit(wchar_t ch) noexcept;
     static bool IsArabicDigit(wchar_t ch) noexcept;
+    static int DigitToInt(wchar_t ch) noexcept;
+    static std::wstring ToPersianDigits(int number);
+    static std::wstring ToPersianDigits(const std::wstring& input);
+    static bool ParseNumber(const std::wstring& text, size_t startPos, int& outNumber, size_t& outCharsConsumed);
 
     static TextDirection DetectFirstStrongDirection(const std::wstring& text) noexcept;
     static TextDirection DetectDominantDirection(const std::wstring& text) noexcept;

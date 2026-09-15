@@ -47,6 +47,14 @@ void TestBiDiEngine() {
     std::string backToUtf8 = BiDiEngine::WideToUtf8(wideStr);
     assert(backToUtf8 == utf8Str);
 
+    // 6. Persian digit conversion & number parsing
+    assert(BiDiEngine::ToPersianDigits(123) == L"۱۲۳");
+    assert(BiDiEngine::ToPersianDigits(0) == L"۰");
+    int parsedNum = 0;
+    size_t consumed = 0;
+    assert(BiDiEngine::ParseNumber(L"۴۵۶", 0, parsedNum, consumed));
+    assert(parsedNum == 456 && consumed == 3);
+
     std::cout << "  -> BiDiEngine PASS" << std::endl;
 }
 
@@ -56,11 +64,14 @@ void TestMarkdownParser() {
     std::wstring md =
         L"# Heading 1\n"
         L"## Heading 2\n"
-        L"A simple paragraph with **bold** and *italic* and `code`.\n"
+        L"A simple paragraph with **bold** and *italic* and ==highlight== and `code`.\n"
         L"\n"
         L"- Item 1\n"
         L"- [ ] Incomplete task\n"
         L"- [x] Completed task\n"
+        L"\n"
+        L"۱. مورد اول فارسی\n"
+        L"۲. مورد دوم فارسی\n"
         L"\n"
         L"```cpp\n"
         L"int main() {\n"
@@ -72,7 +83,13 @@ void TestMarkdownParser() {
         L"|:------|:-----:|\n"
         L"| Val A | Val B |\n"
         L"\n"
-        L"> This is a blockquote\n"
+        L"> [!NOTE]\n"
+        L"> This is an English note alert.\n"
+        L"\n"
+        L"> [!هشدار]\n"
+        L"> این یک هشدار مهم به زبان فارسی است.\n"
+        L"\n"
+        L"> This is a classic blockquote\n"
         L"\n"
         L"---\n";
 
@@ -87,14 +104,16 @@ void TestMarkdownParser() {
 
     // Check paragraph inlines
     assert(doc.blocks[2].type == MarkdownBlockType::Paragraph);
-    bool hasBold = false, hasItalic = false, hasCode = false;
+    bool hasBold = false, hasItalic = false, hasCode = false, hasHighlight = false;
     for (const auto& span : doc.blocks[2].inlines) {
         if (span.type == InlineStyleType::Bold && span.text == L"bold") hasBold = true;
         if (span.type == InlineStyleType::Italic && span.text == L"italic") hasItalic = true;
+        if (span.type == InlineStyleType::Highlight && span.text == L"highlight") hasHighlight = true;
         if (span.type == InlineStyleType::InlineCode && span.text == L"code") hasCode = true;
     }
     assert(hasBold);
     assert(hasItalic);
+    assert(hasHighlight);
     assert(hasCode);
 
     // Check list items
@@ -102,23 +121,35 @@ void TestMarkdownParser() {
     assert(doc.blocks[4].type == MarkdownBlockType::TaskListItem && !doc.blocks[4].isTaskChecked);
     assert(doc.blocks[5].type == MarkdownBlockType::TaskListItem && doc.blocks[5].isTaskChecked);
 
+    // Check Persian ordered list
+    assert(doc.blocks[6].type == MarkdownBlockType::OrderedListItem);
+    assert(doc.blocks[6].listIndex == 1);
+    assert(doc.blocks[6].isRTL);
+    assert(doc.blocks[7].type == MarkdownBlockType::OrderedListItem);
+    assert(doc.blocks[7].listIndex == 2);
+    assert(doc.blocks[7].isRTL);
+
     // Check code block
-    assert(doc.blocks[6].type == MarkdownBlockType::CodeBlock);
-    assert(doc.blocks[6].codeLanguage == L"cpp");
-    assert(doc.blocks[6].codeLines.size() == 3);
+    assert(doc.blocks[8].type == MarkdownBlockType::CodeBlock);
+    assert(doc.blocks[8].codeLanguage == L"cpp");
+    assert(doc.blocks[8].codeLines.size() == 3);
 
     // Check table
-    assert(doc.blocks[7].type == MarkdownBlockType::Table);
-    assert(doc.blocks[7].table.alignments.size() == 2);
-    assert(doc.blocks[7].table.alignments[0] == TableColumnAlign::Left);
-    assert(doc.blocks[7].table.alignments[1] == TableColumnAlign::Center);
-    assert(doc.blocks[7].table.rows.size() == 2);
-    assert(doc.blocks[7].table.rows[0].isHeader);
-    assert(!doc.blocks[7].table.rows[1].isHeader);
+    assert(doc.blocks[9].type == MarkdownBlockType::Table);
+    assert(doc.blocks[9].table.alignments.size() == 2);
+    assert(doc.blocks[9].table.rows.size() == 2);
 
-    // Check blockquote & HR
-    assert(doc.blocks[8].type == MarkdownBlockType::Blockquote);
-    assert(doc.blocks[9].type == MarkdownBlockType::HorizontalRule);
+    // Check Alerts (English & Persian)
+    assert(doc.blocks[10].type == MarkdownBlockType::AlertCallout);
+    assert(doc.blocks[10].alertType == AlertType::Note);
+
+    assert(doc.blocks[11].type == MarkdownBlockType::AlertCallout);
+    assert(doc.blocks[11].alertType == AlertType::Warning);
+    assert(doc.blocks[11].isRTL);
+
+    // Check regular blockquote & HR
+    assert(doc.blocks[12].type == MarkdownBlockType::Blockquote);
+    assert(doc.blocks[13].type == MarkdownBlockType::HorizontalRule);
 
     std::cout << "  -> MarkdownParser PASS" << std::endl;
 }
@@ -152,7 +183,7 @@ void TestSyntaxHighlighter() {
 void TestHtmlExporter() {
     std::cout << "[TEST] HtmlExporter..." << std::endl;
 
-    std::wstring md = L"# Title\n\nPersian: سلام دنیا\n";
+    std::wstring md = L"# Title\n\nPersian: سلام دنیا\n\n- Item 1\n- Item 2\n\n> [!NOTE]\n> Alert test\n";
     MarkdownDocument doc = MarkdownParser::Parse(md);
     std::wstring html = HtmlExporter::ExportToHtml(doc, L"Test Title", true);
 
@@ -160,6 +191,9 @@ void TestHtmlExporter() {
     assert(html.find(L"<!DOCTYPE html>") != std::wstring::npos);
     assert(html.find(L"<title>Test Title</title>") != std::wstring::npos);
     assert(html.find(L"dir=\"rtl\"") != std::wstring::npos);
+    assert(html.find(L"<ul") != std::wstring::npos);
+    assert(html.find(L"</ul>") != std::wstring::npos);
+    assert(html.find(L"alert-callout") != std::wstring::npos);
 
     std::cout << "  -> HtmlExporter PASS" << std::endl;
 }

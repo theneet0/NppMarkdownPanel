@@ -15,6 +15,16 @@ const wchar_t* s_htmlStyles = LR"(
     --quote-border: #0969da;
     --table-alt: #f6f8fa;
     --link-color: #0969da;
+    --alert-note-bg: #edf6fd;
+    --alert-note-bar: #0969da;
+    --alert-tip-bg: #edf9ef;
+    --alert-tip-bar: #1a7f37;
+    --alert-important-bg: #f7f2fa;
+    --alert-important-bar: #8250df;
+    --alert-warning-bg: #fffbea;
+    --alert-warning-bar: #bf8700;
+    --alert-caution-bg: #fff0ed;
+    --alert-caution-bar: #cf222e;
 }
 @media (prefers-color-scheme: dark) {
     :root {
@@ -25,6 +35,16 @@ const wchar_t* s_htmlStyles = LR"(
         --quote-border: #1f6feb;
         --table-alt: #161b22;
         --link-color: #58a6ff;
+        --alert-note-bg: #1c2836;
+        --alert-note-bar: #2f81f7;
+        --alert-tip-bg: #162d20;
+        --alert-tip-bar: #2ea043;
+        --alert-important-bg: #261e33;
+        --alert-important-bar: #a371f7;
+        --alert-warning-bg: #2e2214;
+        --alert-warning-bar: #d29922;
+        --alert-caution-bg: #31191b;
+        --alert-caution-bar: #f85149;
     }
 }
 body.dark {
@@ -35,6 +55,16 @@ body.dark {
     --quote-border: #1f6feb;
     --table-alt: #161b22;
     --link-color: #58a6ff;
+    --alert-note-bg: #1c2836;
+    --alert-note-bar: #2f81f7;
+    --alert-tip-bg: #162d20;
+    --alert-tip-bar: #2ea043;
+    --alert-important-bg: #261e33;
+    --alert-important-bar: #a371f7;
+    --alert-warning-bg: #2e2214;
+    --alert-warning-bar: #d29922;
+    --alert-caution-bg: #31191b;
+    --alert-caution-bar: #f85149;
 }
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Vazirmatn", Roboto, Helvetica, Arial, sans-serif;
@@ -51,9 +81,9 @@ h1 { font-size: 2em; border-bottom: 1px solid var(--border-color); padding-botto
 h2 { font-size: 1.5em; border-bottom: 1px solid var(--border-color); padding-bottom: .3em; }
 h3 { font-size: 1.25em; }
 hr { height: .25em; padding: 0; margin: 24px 0; background-color: var(--border-color); border: 0; }
-blockquote { margin: 0; padding: 0 1em; color: #57606a; border-left: .25em solid var(--quote-border); }
-blockquote[dir="rtl"] { border-left: none; border-right: .25em solid var(--quote-border); }
-pre { background-color: var(--code-bg); padding: 16px; border-radius: 6px; overflow: auto; border: 1px solid var(--border-color); }
+blockquote { margin: 16px 0; padding: 8px 16px; color: var(--text-color); border-left: 4px solid var(--quote-border); background-color: var(--table-alt); border-radius: 4px; }
+blockquote[dir="rtl"] { border-left: none; border-right: 4px solid var(--quote-border); }
+pre { background-color: var(--code-bg); padding: 16px; border-radius: 8px; overflow: auto; border: 1px solid var(--border-color); font-size: 90%; }
 code { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; font-size: 85%; padding: .2em .4em; background-color: var(--code-bg); border-radius: 4px; }
 pre code { padding: 0; background: transparent; font-size: 100%; }
 table { border-collapse: collapse; width: 100%; margin: 16px 0; }
@@ -64,7 +94,17 @@ ul, ol { padding-left: 2em; margin-bottom: 16px; }
 ul[dir="rtl"], ol[dir="rtl"] { padding-left: 0; padding-right: 2em; }
 a { color: var(--link-color); text-decoration: none; }
 a:hover { text-decoration: underline; }
+mark { background-color: #fff8c5; color: #24292f; padding: 0.1em 0.3em; border-radius: 3px; }
+body.dark mark { background-color: #3e3816; color: #e6edf3; }
 .task-list-item { list-style-type: none; margin-left: -1.5em; }
+.alert-callout { border-radius: 6px; padding: 12px 16px; margin: 16px 0; border-left: 4px solid var(--quote-border); }
+.alert-callout[dir="rtl"] { border-left: none; border-right: 4px solid var(--quote-border); }
+.alert-callout-title { font-weight: 600; margin-bottom: 6px; }
+.alert-note { background-color: var(--alert-note-bg); border-color: var(--alert-note-bar); }
+.alert-tip { background-color: var(--alert-tip-bg); border-color: var(--alert-tip-bar); }
+.alert-important { background-color: var(--alert-important-bg); border-color: var(--alert-important-bar); }
+.alert-warning { background-color: var(--alert-warning-bg); border-color: var(--alert-warning-bar); }
+.alert-caution { background-color: var(--alert-caution-bg); border-color: var(--alert-caution-bar); }
 )";
 
 } // namespace
@@ -105,8 +145,14 @@ std::wstring HtmlExporter::InlinesToHtml(const std::vector<MarkdownSpan>& inline
             case InlineStyleType::Underline:
                 out += L"<u>" + escaped + L"</u>";
                 break;
+            case InlineStyleType::Highlight:
+                out += L"<mark>" + escaped + L"</mark>";
+                break;
             case InlineStyleType::InlineCode:
                 out += L"<code>" + escaped + L"</code>";
+                break;
+            case InlineStyleType::InlineMath:
+                out += L"<code class=\"math\">" + escaped + L"</code>";
                 break;
             case InlineStyleType::Link:
                 out += L"<a href=\"" + EscapeHtml(span.extra) + L"\" target=\"_blank\">" + escaped + L"</a>";
@@ -128,11 +174,27 @@ std::wstring HtmlExporter::ExportToHtml(const MarkdownDocument& doc, const std::
     ss << L"<meta charset=\"UTF-8\">\n";
     ss << L"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n";
     ss << L"<title>" << EscapeHtml(title) << L"</title>\n";
+    ss << L"<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n";
+    ss << L"<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n";
+    ss << L"<link href=\"https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap\" rel=\"stylesheet\">\n";
     ss << L"<style>\n" << s_htmlStyles << L"</style>\n";
     ss << L"</head>\n<body class=\"" << (isDarkMode ? L"dark" : L"light") << L"\">\n";
 
+    bool inUl = false;
+    bool inOl = false;
+    auto closeLists = [&]() {
+        if (inUl) { ss << L"</ul>\n"; inUl = false; }
+        if (inOl) { ss << L"</ol>\n"; inOl = false; }
+    };
+
     for (const auto& block : doc.blocks) {
         std::wstring dirAttr = block.isRTL ? L" dir=\"rtl\"" : L" dir=\"ltr\"";
+        if (block.type != MarkdownBlockType::UnorderedListItem &&
+            block.type != MarkdownBlockType::OrderedListItem &&
+            block.type != MarkdownBlockType::TaskListItem) {
+            closeLists();
+        }
+
         switch (block.type) {
             case MarkdownBlockType::Header1:
                 ss << L"<h1" << dirAttr << L">" << InlinesToHtml(block.inlines) << L"</h1>\n";
@@ -158,6 +220,35 @@ std::wstring HtmlExporter::ExportToHtml(const MarkdownDocument& doc, const std::
             case MarkdownBlockType::Blockquote:
                 ss << L"<blockquote" << dirAttr << L"><p>" << InlinesToHtml(block.inlines) << L"</p></blockquote>\n";
                 break;
+            case MarkdownBlockType::AlertCallout: {
+                std::wstring alertClass = L"alert-note";
+                std::wstring alertTitle = block.isRTL ? L"ℹ️ نکته" : L"ℹ️ Note";
+                switch (block.alertType) {
+                    case AlertType::Tip:
+                        alertClass = L"alert-tip";
+                        alertTitle = block.isRTL ? L"💡 راهنما / ترفند" : L"💡 Tip";
+                        break;
+                    case AlertType::Important:
+                        alertClass = L"alert-important";
+                        alertTitle = block.isRTL ? L"📌 مهم" : L"📌 Important";
+                        break;
+                    case AlertType::Warning:
+                        alertClass = L"alert-warning";
+                        alertTitle = block.isRTL ? L"⚠️ هشدار" : L"⚠️ Warning";
+                        break;
+                    case AlertType::Caution:
+                        alertClass = L"alert-caution";
+                        alertTitle = block.isRTL ? L"🛑 احتیاط" : L"🛑 Caution";
+                        break;
+                    default:
+                        break;
+                }
+                ss << L"<div class=\"alert-callout " << alertClass << L"\"" << dirAttr << L">\n";
+                ss << L"  <div class=\"alert-callout-title\">" << alertTitle << L"</div>\n";
+                ss << L"  <div>" << InlinesToHtml(block.inlines) << L"</div>\n";
+                ss << L"</div>\n";
+                break;
+            }
             case MarkdownBlockType::CodeBlock: {
                 std::wstring lang = block.codeLanguage.empty() ? L"" : L" class=\"language-" + EscapeHtml(block.codeLanguage) + L"\"";
                 ss << L"<pre><code" << lang << L">";
@@ -188,14 +279,24 @@ std::wstring HtmlExporter::ExportToHtml(const MarkdownDocument& doc, const std::
                 break;
             }
             case MarkdownBlockType::TaskListItem: {
+                if (inOl) { ss << L"</ol>\n"; inOl = false; }
+                if (!inUl) { ss << (block.isRTL ? L"<ul dir=\"rtl\">\n" : L"<ul>\n"); inUl = true; }
                 std::wstring checked = block.isTaskChecked ? L"checked " : L"";
                 ss << L"<li class=\"task-list-item\"" << dirAttr << L"><input type=\"checkbox\" " << checked << L"disabled/> " << InlinesToHtml(block.inlines) << L"</li>\n";
                 break;
             }
-            case MarkdownBlockType::UnorderedListItem:
-            case MarkdownBlockType::OrderedListItem:
+            case MarkdownBlockType::UnorderedListItem: {
+                if (inOl) { ss << L"</ol>\n"; inOl = false; }
+                if (!inUl) { ss << (block.isRTL ? L"<ul dir=\"rtl\">\n" : L"<ul>\n"); inUl = true; }
                 ss << L"<li" << dirAttr << L">" << InlinesToHtml(block.inlines) << L"</li>\n";
                 break;
+            }
+            case MarkdownBlockType::OrderedListItem: {
+                if (inUl) { ss << L"</ul>\n"; inUl = false; }
+                if (!inOl) { ss << (block.isRTL ? L"<ol dir=\"rtl\">\n" : L"<ol>\n"); inOl = true; }
+                ss << L"<li" << dirAttr << L">" << InlinesToHtml(block.inlines) << L"</li>\n";
+                break;
+            }
             case MarkdownBlockType::Paragraph:
             default:
                 ss << L"<p" << dirAttr << L">" << InlinesToHtml(block.inlines) << L"</p>\n";
@@ -203,6 +304,7 @@ std::wstring HtmlExporter::ExportToHtml(const MarkdownDocument& doc, const std::
         }
     }
 
+    closeLists();
     ss << L"</body>\n</html>\n";
     return ss.str();
 }

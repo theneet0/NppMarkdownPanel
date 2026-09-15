@@ -34,6 +34,7 @@ MarkdownRenderer::~MarkdownRenderer() {
     SafeRelease(&m_pFormatTable);
     SafeRelease(&m_pFormatTableHeader);
     SafeRelease(&m_pFormatBadge);
+    SafeRelease(&m_pFormatAlertTitle);
     SafeRelease(&m_pDWriteFactory);
     SafeRelease(&m_pD2DFactory);
 }
@@ -70,9 +71,24 @@ HRESULT MarkdownRenderer::CreateDeviceIndependentResources() {
     SafeRelease(&m_pFormatTable);
     SafeRelease(&m_pFormatTableHeader);
     SafeRelease(&m_pFormatBadge);
+    SafeRelease(&m_pFormatAlertTitle);
 
-    const wchar_t* fontText = L"Segoe UI";
-    const wchar_t* fontMono = L"Consolas";
+    // Font detection: Vazirmatn for Persian typography, Cascadia Code for modern code
+    bool hasVazir = false;
+    bool hasCascadia = false;
+    IDWriteFontCollection* pCollection = nullptr;
+    if (SUCCEEDED(m_pDWriteFactory->GetSystemFontCollection(&pCollection, FALSE))) {
+        UINT32 idx = 0;
+        BOOL exists = FALSE;
+        pCollection->FindFamilyName(L"Vazirmatn", &idx, &exists);
+        if (exists) hasVazir = true;
+        pCollection->FindFamilyName(L"Cascadia Code", &idx, &exists);
+        if (exists) hasCascadia = true;
+        pCollection->Release();
+    }
+
+    const wchar_t* fontText = hasVazir ? L"Vazirmatn" : L"Segoe UI";
+    const wchar_t* fontMono = hasCascadia ? L"Cascadia Code" : L"Consolas";
 
     float scaledBase = m_baseFontSize * m_zoom;
 
@@ -99,6 +115,9 @@ HRESULT MarkdownRenderer::CreateDeviceIndependentResources() {
 
     // Badge / Button Format
     m_pDWriteFactory->CreateTextFormat(fontText, nullptr, DWRITE_FONT_WEIGHT_SEMI_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, scaledBase * 0.75f, L"en-us", &m_pFormatBadge);
+
+    // Alert Title Format
+    m_pDWriteFactory->CreateTextFormat(fontText, nullptr, DWRITE_FONT_WEIGHT_SEMI_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, scaledBase * 1.05f, L"en-us", &m_pFormatAlertTitle);
 
     return S_OK;
 }
@@ -177,6 +196,23 @@ HRESULT MarkdownRenderer::CreateDeviceResources() {
         m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x4EC9B0), &m_pBrushCheckboxCheck);
         m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x262630), &m_pBrushBtnBg);
         m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x363644), &m_pBrushBtnHover);
+
+        // Alert Callouts (Dark Mode)
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x1C2836), &m_pBrushAlertNoteBg);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x2F81F7), &m_pBrushAlertNoteBar);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x162D20), &m_pBrushAlertTipBg);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x2EA043), &m_pBrushAlertTipBar);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x261E33), &m_pBrushAlertImportantBg);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xA371F7), &m_pBrushAlertImportantBar);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x2E2214), &m_pBrushAlertWarningBg);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xD29922), &m_pBrushAlertWarningBar);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x31191B), &m_pBrushAlertCautionBg);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xF85149), &m_pBrushAlertCautionBar);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x3E3816), &m_pBrushHighlightBg);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x25252E), &m_pBrushInlineCodeBg);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xFF5F56), &m_pBrushMacClose);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xFFBD2E), &m_pBrushMacMin);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x27C93F), &m_pBrushMacMax);
     } else {
         // Modern Light Palette (GitHub Light inspired)
         m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xFFFFFF), &m_pBrushBg);
@@ -204,6 +240,23 @@ HRESULT MarkdownRenderer::CreateDeviceResources() {
         m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x0969DA), &m_pBrushCheckboxCheck);
         m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xEEF1F4), &m_pBrushBtnBg);
         m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xDFE3E8), &m_pBrushBtnHover);
+
+        // Alert Callouts (Light Mode)
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xEDF6FD), &m_pBrushAlertNoteBg);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x0969DA), &m_pBrushAlertNoteBar);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xEDF9EF), &m_pBrushAlertTipBg);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x1A7F37), &m_pBrushAlertTipBar);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xF7F2FA), &m_pBrushAlertImportantBg);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x8250DF), &m_pBrushAlertImportantBar);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xFFFBEA), &m_pBrushAlertWarningBg);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xBF8700), &m_pBrushAlertWarningBar);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xFFF0ED), &m_pBrushAlertCautionBg);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xCF222E), &m_pBrushAlertCautionBar);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xFFF8C5), &m_pBrushHighlightBg);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xEFF1F3), &m_pBrushInlineCodeBg);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xFF5F56), &m_pBrushMacClose);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xFFBD2E), &m_pBrushMacMin);
+        m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x27C93F), &m_pBrushMacMax);
     }
 
     return S_OK;
@@ -236,11 +289,32 @@ void MarkdownRenderer::DiscardDeviceResources() {
     SafeRelease(&m_pBrushCheckboxCheck);
     SafeRelease(&m_pBrushBtnBg);
     SafeRelease(&m_pBrushBtnHover);
+
+    SafeRelease(&m_pBrushAlertNoteBg);
+    SafeRelease(&m_pBrushAlertNoteBar);
+    SafeRelease(&m_pBrushAlertTipBg);
+    SafeRelease(&m_pBrushAlertTipBar);
+    SafeRelease(&m_pBrushAlertImportantBg);
+    SafeRelease(&m_pBrushAlertImportantBar);
+    SafeRelease(&m_pBrushAlertWarningBg);
+    SafeRelease(&m_pBrushAlertWarningBar);
+    SafeRelease(&m_pBrushAlertCautionBg);
+    SafeRelease(&m_pBrushAlertCautionBar);
+    SafeRelease(&m_pBrushHighlightBg);
+    SafeRelease(&m_pBrushInlineCodeBg);
+    SafeRelease(&m_pBrushMacClose);
+    SafeRelease(&m_pBrushMacMin);
+    SafeRelease(&m_pBrushMacMax);
 }
 
 void MarkdownRenderer::ClearLayout() {
     for (auto& item : m_renderItems) {
         SafeRelease(&item.pLayout);
+        SafeRelease(&item.pAlertTitleLayout);
+        for (auto* pLineL : item.codeLineLayouts) {
+            SafeRelease(&pLineL);
+        }
+        item.codeLineLayouts.clear();
         for (auto& row : item.tableCellLayouts) {
             for (auto& pL : row) {
                 SafeRelease(&pL);
@@ -359,24 +433,58 @@ void MarkdownRenderer::Layout(float clientWidth) {
             }
 
             case MarkdownBlockType::CodeBlock: {
-                blockMarginTop = 12.0f * m_zoom;
-                blockMarginBottom = 14.0f * m_zoom;
+                blockMarginTop = 14.0f * m_zoom;
+                blockMarginBottom = 16.0f * m_zoom;
                 currentY += blockMarginTop;
 
-                float codePadding = 12.0f * m_zoom;
-                float headerH = 26.0f * m_zoom;
+                float codePadding = 16.0f * m_zoom;
+                float headerH = 28.0f * m_zoom;
                 float lineH = (m_baseFontSize * 0.9f * m_zoom) * 1.5f;
-                float totalCodeH = headerH + (block.codeLines.size() * lineH) + codePadding;
 
+                // Create text layouts for each line of code with syntax highlighting
+                for (const auto& codeLine : block.codeLines) {
+                    IDWriteTextLayout* pLineLayout = nullptr;
+                    m_pDWriteFactory->CreateTextLayout(
+                        codeLine.c_str(),
+                        static_cast<UINT32>(codeLine.size()),
+                        m_pFormatCode,
+                        contentW - (28.0f * m_zoom),
+                        lineH * 2.0f,
+                        &pLineLayout
+                    );
+                    if (pLineLayout) {
+                        auto tokens = SyntaxHighlighter::Tokenize(codeLine, block.codeLanguage);
+                        for (const auto& tok : tokens) {
+                            DWRITE_TEXT_RANGE range = { static_cast<UINT32>(tok.start), static_cast<UINT32>(tok.length) };
+                            ID2D1SolidColorBrush* b = nullptr;
+                            switch (tok.type) {
+                                case HighlightTokenType::Keyword: b = m_pBrushKeyword; break;
+                                case HighlightTokenType::Type: b = m_pBrushType; break;
+                                case HighlightTokenType::String: b = m_pBrushString; break;
+                                case HighlightTokenType::Comment: b = m_pBrushComment; break;
+                                case HighlightTokenType::Number: b = m_pBrushNumber; break;
+                                case HighlightTokenType::Preprocessor: b = m_pBrushH1; break;
+                                default: break;
+                            }
+                            if (b) {
+                                pLineLayout->SetDrawingEffect(b, range);
+                            }
+                        }
+                    }
+                    item.codeLineLayouts.push_back(pLineLayout);
+                }
+
+                float totalCodeH = headerH + (block.codeLines.size() * lineH) + codePadding;
                 item.rect = D2D1::RectF(padX, currentY, padX + contentW, currentY + totalCodeH);
+
                 // Copy button rect in header
-                float btnW = 55.0f * m_zoom;
+                float btnW = 60.0f * m_zoom;
                 float btnH = 20.0f * m_zoom;
                 item.copyBtnRect = D2D1::RectF(
                     padX + contentW - btnW - 8.0f,
-                    currentY + 3.0f,
+                    currentY + 4.0f,
                     padX + contentW - 8.0f,
-                    currentY + 3.0f + btnH
+                    currentY + 4.0f + btnH
                 );
 
                 currentY += totalCodeH + blockMarginBottom;
@@ -431,6 +539,78 @@ void MarkdownRenderer::Layout(float clientWidth) {
                 break;
             }
 
+            case MarkdownBlockType::AlertCallout: {
+                blockMarginTop = 12.0f * m_zoom;
+                blockMarginBottom = 14.0f * m_zoom;
+                currentY += blockMarginTop;
+
+                item.alertType = block.alertType;
+                item.alertTitle = block.alertTitle;
+
+                std::wstring titleText;
+                switch (block.alertType) {
+                    case AlertType::Note:
+                        titleText = block.isRTL ? L"ℹ️ نکته" : L"ℹ️ Note";
+                        break;
+                    case AlertType::Tip:
+                        titleText = block.isRTL ? L"💡 راهنما / ترفند" : L"💡 Tip";
+                        break;
+                    case AlertType::Important:
+                        titleText = block.isRTL ? L"📌 مهم" : L"📌 Important";
+                        break;
+                    case AlertType::Warning:
+                        titleText = block.isRTL ? L"⚠️ هشدار" : L"⚠️ Warning";
+                        break;
+                    case AlertType::Caution:
+                        titleText = block.isRTL ? L"🛑 احتیاط" : L"🛑 Caution";
+                        break;
+                    default:
+                        titleText = block.alertTitle;
+                        break;
+                }
+
+                m_pDWriteFactory->CreateTextLayout(
+                    titleText.c_str(),
+                    static_cast<UINT32>(titleText.size()),
+                    m_pFormatAlertTitle,
+                    contentW - (28.0f * m_zoom),
+                    100.0f,
+                    &item.pAlertTitleLayout
+                );
+                if (item.pAlertTitleLayout && block.isRTL) {
+                    item.pAlertTitleLayout->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_TRAILING);
+                }
+
+                float titleH = 22.0f * m_zoom;
+                if (item.pAlertTitleLayout) {
+                    DWRITE_TEXT_METRICS tm;
+                    item.pAlertTitleLayout->GetMetrics(&tm);
+                    titleH = tm.height;
+                }
+
+                IDWriteTextFormat* pFormat = block.isRTL ? m_pFormatBodyRTL : m_pFormatBody;
+                m_pDWriteFactory->CreateTextLayout(
+                    block.rawText.c_str(),
+                    static_cast<UINT32>(block.rawText.size()),
+                    pFormat,
+                    contentW - (28.0f * m_zoom),
+                    10000.0f,
+                    &item.pLayout
+                );
+
+                float bodyH = 0.0f;
+                if (item.pLayout) {
+                    DWRITE_TEXT_METRICS tm;
+                    item.pLayout->GetMetrics(&tm);
+                    bodyH = tm.height;
+                }
+
+                float totalH = titleH + bodyH + (20.0f * m_zoom);
+                item.rect = D2D1::RectF(padX, currentY, padX + contentW, currentY + totalH);
+                currentY += totalH + blockMarginBottom;
+                break;
+            }
+
             case MarkdownBlockType::Blockquote: {
                 blockMarginTop = 8.0f * m_zoom;
                 blockMarginBottom = 8.0f * m_zoom;
@@ -464,7 +644,7 @@ void MarkdownRenderer::Layout(float clientWidth) {
             case MarkdownBlockType::TaskListItem: {
                 currentY += 4.0f * m_zoom;
                 float indent = (18.0f * block.level) * m_zoom;
-                float prefixW = 24.0f * m_zoom;
+                float prefixW = 30.0f * m_zoom;
                 float listW = contentW - indent - prefixW;
 
                 IDWriteTextFormat* pFormat = block.isRTL ? m_pFormatBodyRTL : m_pFormatBody;
@@ -486,7 +666,11 @@ void MarkdownRenderer::Layout(float clientWidth) {
                     if (block.type == MarkdownBlockType::TaskListItem) {
                         float cbSize = 14.0f * m_zoom;
                         float cbY = currentY + (itemH - cbSize) * 0.5f;
-                        item.checkboxRect = D2D1::RectF(padX + indent, cbY, padX + indent + cbSize, cbY + cbSize);
+                        if (block.isRTL) {
+                            item.checkboxRect = D2D1::RectF(padX + contentW - cbSize, cbY, padX + contentW, cbY + cbSize);
+                        } else {
+                            item.checkboxRect = D2D1::RectF(padX + indent, cbY, padX + indent + cbSize, cbY + cbSize);
+                        }
                     }
 
                     currentY += itemH + 4.0f * m_zoom;
@@ -519,10 +703,17 @@ void MarkdownRenderer::Layout(float clientWidth) {
                         } else if (span.type == InlineStyleType::BoldItalic) {
                             item.pLayout->SetFontWeight(DWRITE_FONT_WEIGHT_BOLD, range);
                             item.pLayout->SetFontStyle(DWRITE_FONT_STYLE_ITALIC, range);
-                        } else if (span.type == InlineStyleType::InlineCode) {
+                        } else if (span.type == InlineStyleType::Highlight) {
+                            item.pLayout->SetFontWeight(DWRITE_FONT_WEIGHT_SEMI_BOLD, range);
+                            item.pLayout->SetDrawingEffect(m_pBrushH3, range);
+                        } else if (span.type == InlineStyleType::InlineCode || span.type == InlineStyleType::InlineMath) {
                             item.pLayout->SetFontFamilyName(L"Consolas", range);
+                            item.pLayout->SetDrawingEffect(m_pBrushType, range);
+                        } else if (span.type == InlineStyleType::Strikethrough) {
+                            item.pLayout->SetStrikethrough(TRUE, range);
                         } else if (span.type == InlineStyleType::Link) {
                             item.pLayout->SetUnderline(TRUE, range);
+                            item.pLayout->SetDrawingEffect(m_pBrushLink, range);
                         }
                         charPos += span.text.size();
                     }
@@ -608,22 +799,29 @@ void MarkdownRenderer::Render() {
             }
 
             case MarkdownBlockType::CodeBlock: {
-                D2D1_ROUNDED_RECT rRect = D2D1::RoundedRect(item.rect, 6.0f, 6.0f);
+                D2D1_ROUNDED_RECT rRect = D2D1::RoundedRect(item.rect, 8.0f, 8.0f);
                 m_pRenderTarget->FillRoundedRectangle(&rRect, m_pBrushCodeBg);
                 m_pRenderTarget->DrawRoundedRectangle(&rRect, m_pBrushCodeBorder, 1.0f);
 
-                // Code Header (Language badge + Copy button)
-                float headerH = 26.0f * m_zoom;
-                D2D1_RECT_F headerRect = D2D1::RectF(item.rect.left, item.rect.top, item.rect.right, item.rect.top + headerH);
+                // Code Header (macOS window dots + Language badge + Copy button)
+                float headerH = 28.0f * m_zoom;
                 m_pRenderTarget->DrawLine(
                     D2D1::Point2F(item.rect.left, item.rect.top + headerH),
                     D2D1::Point2F(item.rect.right, item.rect.top + headerH),
                     m_pBrushCodeBorder, 0.75f
                 );
 
+                // 3 macOS dots
+                float dotRadius = 4.5f * m_zoom;
+                float dotY = item.rect.top + (headerH * 0.5f);
+                float dotX = item.rect.left + (14.0f * m_zoom);
+                m_pRenderTarget->FillEllipse(D2D1::Ellipse(D2D1::Point2F(dotX, dotY), dotRadius, dotRadius), m_pBrushMacClose);
+                m_pRenderTarget->FillEllipse(D2D1::Ellipse(D2D1::Point2F(dotX + (12.0f * m_zoom), dotY), dotRadius, dotRadius), m_pBrushMacMin);
+                m_pRenderTarget->FillEllipse(D2D1::Ellipse(D2D1::Point2F(dotX + (24.0f * m_zoom), dotY), dotRadius, dotRadius), m_pBrushMacMax);
+
                 // Language tag
                 if (!item.codeLanguage.empty()) {
-                    D2D1_RECT_F langRect = D2D1::RectF(item.rect.left + 12.0f, item.rect.top + 4.0f, item.rect.left + 200.0f, item.rect.top + headerH);
+                    D2D1_RECT_F langRect = D2D1::RectF(dotX + (38.0f * m_zoom), item.rect.top + 4.0f, item.rect.left + 250.0f, item.rect.top + headerH);
                     m_pRenderTarget->DrawTextW(
                         item.codeLanguage.c_str(),
                         static_cast<UINT32>(item.codeLanguage.size()),
@@ -634,31 +832,83 @@ void MarkdownRenderer::Render() {
                 }
 
                 // Copy button
-                D2D1_ROUNDED_RECT btnR = D2D1::RoundedRect(item.copyBtnRect, 3.0f, 3.0f);
+                D2D1_ROUNDED_RECT btnR = D2D1::RoundedRect(item.copyBtnRect, 4.0f, 4.0f);
                 m_pRenderTarget->FillRoundedRectangle(&btnR, item.isCopyBtnHovered ? m_pBrushBtnHover : m_pBrushBtnBg);
                 m_pRenderTarget->DrawRoundedRectangle(&btnR, m_pBrushCodeBorder, 0.75f);
+                const wchar_t* copyLabel = item.isCopiedAnim ? L"✓ Copied" : L"Copy";
                 m_pRenderTarget->DrawTextW(
-                    L"Copy", 4, m_pFormatBadge, &item.copyBtnRect, m_pBrushText
+                    copyLabel, static_cast<UINT32>(wcslen(copyLabel)), m_pFormatBadge, &item.copyBtnRect,
+                    item.isCopiedAnim ? m_pBrushAlertTipBar : m_pBrushText
                 );
 
                 // Render code lines with syntax highlighting
                 float lineH = (m_baseFontSize * 0.9f * m_zoom) * 1.5f;
-                float lineY = item.rect.top + headerH + (8.0f * m_zoom);
-                float lineX = item.rect.left + (12.0f * m_zoom);
+                float lineY = item.rect.top + headerH + (10.0f * m_zoom);
+                float lineX = item.rect.left + (14.0f * m_zoom);
 
-                for (const auto& codeLine : item.codeLines) {
+                for (size_t l = 0; l < item.codeLineLayouts.size(); ++l) {
                     if (lineY + lineH > m_scrollY && lineY < m_scrollY + clientH) {
-                        D2D1_RECT_F lRect = D2D1::RectF(lineX, lineY, item.rect.right - 12.0f, lineY + lineH);
-                        // Draw default line text
-                        m_pRenderTarget->DrawTextW(
-                            codeLine.c_str(),
-                            static_cast<UINT32>(codeLine.size()),
-                            m_pFormatCode,
-                            &lRect,
-                            m_pBrushCodeText
-                        );
+                        IDWriteTextLayout* pLineL = item.codeLineLayouts[l];
+                        if (pLineL) {
+                            m_pRenderTarget->DrawTextLayout(
+                                D2D1::Point2F(lineX, lineY),
+                                pLineL,
+                                m_pBrushCodeText
+                            );
+                        }
                     }
                     lineY += lineH;
+                }
+                break;
+            }
+
+            case MarkdownBlockType::AlertCallout: {
+                ID2D1SolidColorBrush* pBgBrush = m_pBrushAlertNoteBg;
+                ID2D1SolidColorBrush* pBarBrush = m_pBrushAlertNoteBar;
+                switch (item.alertType) {
+                    case AlertType::Tip:
+                        pBgBrush = m_pBrushAlertTipBg; pBarBrush = m_pBrushAlertTipBar; break;
+                    case AlertType::Important:
+                        pBgBrush = m_pBrushAlertImportantBg; pBarBrush = m_pBrushAlertImportantBar; break;
+                    case AlertType::Warning:
+                        pBgBrush = m_pBrushAlertWarningBg; pBarBrush = m_pBrushAlertWarningBar; break;
+                    case AlertType::Caution:
+                        pBgBrush = m_pBrushAlertCautionBg; pBarBrush = m_pBrushAlertCautionBar; break;
+                    default:
+                        break;
+                }
+
+                D2D1_ROUNDED_RECT rRect = D2D1::RoundedRect(item.rect, 6.0f, 6.0f);
+                m_pRenderTarget->FillRoundedRectangle(&rRect, pBgBrush);
+                m_pRenderTarget->DrawRoundedRectangle(&rRect, pBarBrush, 0.75f);
+
+                // Accent vertical bar
+                float barW = 4.0f * m_zoom;
+                if (item.isRTL) {
+                    m_pRenderTarget->FillRectangle(
+                        D2D1::RectF(item.rect.right - barW, item.rect.top + 2.0f, item.rect.right - 1.0f, item.rect.bottom - 2.0f),
+                        pBarBrush
+                    );
+                } else {
+                    m_pRenderTarget->FillRectangle(
+                        D2D1::RectF(item.rect.left + 1.0f, item.rect.top + 2.0f, item.rect.left + barW, item.rect.bottom - 2.0f),
+                        pBarBrush
+                    );
+                }
+
+                // Title + Icon
+                float titleX = item.isRTL ? item.rect.left + (12.0f * m_zoom) : item.rect.left + (14.0f * m_zoom);
+                float titleY = item.rect.top + (8.0f * m_zoom);
+                if (item.pAlertTitleLayout) {
+                    m_pRenderTarget->DrawTextLayout(D2D1::Point2F(titleX, titleY), item.pAlertTitleLayout, pBarBrush);
+                    DWRITE_TEXT_METRICS tm;
+                    item.pAlertTitleLayout->GetMetrics(&tm);
+                    titleY += tm.height + (4.0f * m_zoom);
+                }
+
+                // Body
+                if (item.pLayout) {
+                    m_pRenderTarget->DrawTextLayout(D2D1::Point2F(titleX, titleY), item.pLayout, m_pBrushText);
                 }
                 break;
             }
@@ -666,7 +916,6 @@ void MarkdownRenderer::Render() {
             case MarkdownBlockType::Blockquote: {
                 D2D1_ROUNDED_RECT rRect = D2D1::RoundedRect(item.rect, 4.0f, 4.0f);
                 m_pRenderTarget->FillRoundedRectangle(&rRect, m_pBrushQuoteBg);
-                // Vertical accent bar on left (or right for RTL)
                 if (item.isRTL) {
                     m_pRenderTarget->FillRectangle(
                         D2D1::RectF(item.rect.right - 4.0f, item.rect.top, item.rect.right, item.rect.bottom),
@@ -674,7 +923,7 @@ void MarkdownRenderer::Render() {
                     );
                 } else {
                     m_pRenderTarget->FillRectangle(
-                        D2D1::RectF(item.rect.left, item.rect.top, item.rect.left + 4.0f, item.rect.bottom),
+                        D2D1::RectF(item.rect.left, item.rect.top + 1.0f, item.rect.left + 4.0f, item.rect.bottom - 1.0f),
                         m_pBrushQuoteBar
                     );
                 }
@@ -734,55 +983,69 @@ void MarkdownRenderer::Render() {
             }
 
             case MarkdownBlockType::UnorderedListItem: {
-                // Draw custom bullet circle
-                float bulletX = item.isRTL ? item.rect.right - (12.0f * m_zoom) : item.rect.left + (6.0f * m_zoom);
-                float bulletY = item.rect.top + (8.0f * m_zoom);
+                // Draw smooth custom bullet circle
+                float bulletX = item.isRTL ? item.rect.right - (12.0f * m_zoom) : item.rect.left + (8.0f * m_zoom);
+                float bulletY = item.rect.top + (10.0f * m_zoom);
                 m_pRenderTarget->FillEllipse(
-                    D2D1::Ellipse(D2D1::Point2F(bulletX, bulletY), 3.0f * m_zoom, 3.0f * m_zoom),
+                    D2D1::Ellipse(D2D1::Point2F(bulletX, bulletY), 3.5f * m_zoom, 3.5f * m_zoom),
                     m_pBrushH2
                 );
 
                 if (item.pLayout) {
-                    float textX = item.isRTL ? item.rect.left : item.rect.left + (18.0f * m_zoom);
+                    float textX = item.isRTL ? item.rect.left : item.rect.left + (20.0f * m_zoom);
                     m_pRenderTarget->DrawTextLayout(D2D1::Point2F(textX, item.rect.top), item.pLayout, m_pBrushText);
                 }
                 break;
             }
 
             case MarkdownBlockType::OrderedListItem: {
-                if (item.pLayout) {
-                    float textX = item.isRTL ? item.rect.left : item.rect.left + (18.0f * m_zoom);
-                    m_pRenderTarget->DrawTextLayout(D2D1::Point2F(textX, item.rect.top), item.pLayout, m_pBrushText);
+                std::wstring numStr;
+                if (item.isRTL) {
+                    numStr = BiDiEngine::ToPersianDigits(item.listIndex) + L".";
+                } else {
+                    numStr = std::to_wstring(item.listIndex) + L".";
+                }
+
+                if (item.isRTL) {
+                    D2D1_RECT_F pfxRect = D2D1::RectF(item.rect.right - (28.0f * m_zoom), item.rect.top, item.rect.right, item.rect.top + (20.0f * m_zoom));
+                    m_pRenderTarget->DrawTextW(numStr.c_str(), static_cast<UINT32>(numStr.size()), m_pFormatBadge, &pfxRect, m_pBrushH1);
+                    if (item.pLayout) {
+                        m_pRenderTarget->DrawTextLayout(D2D1::Point2F(item.rect.left, item.rect.top), item.pLayout, m_pBrushText);
+                    }
+                } else {
+                    D2D1_RECT_F pfxRect = D2D1::RectF(item.rect.left, item.rect.top, item.rect.left + (24.0f * m_zoom), item.rect.top + (20.0f * m_zoom));
+                    m_pRenderTarget->DrawTextW(numStr.c_str(), static_cast<UINT32>(numStr.size()), m_pFormatBadge, &pfxRect, m_pBrushH1);
+                    if (item.pLayout) {
+                        m_pRenderTarget->DrawTextLayout(D2D1::Point2F(item.rect.left + (24.0f * m_zoom), item.rect.top), item.pLayout, m_pBrushText);
+                    }
                 }
                 break;
             }
 
             case MarkdownBlockType::TaskListItem: {
-                // Checkbox
-                D2D1_ROUNDED_RECT cbR = D2D1::RoundedRect(item.checkboxRect, 3.0f, 3.0f);
-                m_pRenderTarget->FillRoundedRectangle(&cbR, m_pBrushCheckboxBg);
+                D2D1_ROUNDED_RECT cbR = D2D1::RoundedRect(item.checkboxRect, 4.0f, 4.0f);
+                m_pRenderTarget->FillRoundedRectangle(&cbR, item.isTaskChecked ? m_pBrushCheckboxCheck : m_pBrushCheckboxBg);
                 m_pRenderTarget->DrawRoundedRectangle(&cbR, m_pBrushCheckboxBorder, 1.2f);
 
                 if (item.isTaskChecked) {
-                    // Draw checkmark inside
                     float l = item.checkboxRect.left;
                     float t = item.checkboxRect.top;
                     float s = item.checkboxRect.right - l;
                     m_pRenderTarget->DrawLine(
-                        D2D1::Point2F(l + s * 0.2f, t + s * 0.5f),
-                        D2D1::Point2F(l + s * 0.45f, t + s * 0.75f),
-                        m_pBrushCheckboxCheck, 1.8f
+                        D2D1::Point2F(l + s * 0.22f, t + s * 0.52f),
+                        D2D1::Point2F(l + s * 0.44f, t + s * 0.74f),
+                        m_pBrushBg, 2.0f
                     );
                     m_pRenderTarget->DrawLine(
-                        D2D1::Point2F(l + s * 0.45f, t + s * 0.75f),
-                        D2D1::Point2F(l + s * 0.8f, t + s * 0.25f),
-                        m_pBrushCheckboxCheck, 1.8f
+                        D2D1::Point2F(l + s * 0.44f, t + s * 0.74f),
+                        D2D1::Point2F(l + s * 0.80f, t + s * 0.28f),
+                        m_pBrushBg, 2.0f
                     );
                 }
 
                 if (item.pLayout) {
                     float textX = item.isRTL ? item.rect.left : item.checkboxRect.right + (8.0f * m_zoom);
-                    m_pRenderTarget->DrawTextLayout(D2D1::Point2F(textX, item.rect.top), item.pLayout, m_pBrushText);
+                    m_pRenderTarget->DrawTextLayout(D2D1::Point2F(textX, item.rect.top), item.pLayout, item.isTaskChecked ? m_pBrushComment : m_pBrushText);
                 }
                 break;
             }
@@ -875,6 +1138,8 @@ bool MarkdownRenderer::OnLButtonDown(int x, int y, HWND hSciEditor) {
                     }
                     CloseClipboard();
                 }
+                item.isCopiedAnim = true;
+                InvalidateRect(m_hwnd, nullptr, FALSE);
                 return true;
             }
         }

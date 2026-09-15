@@ -42,6 +42,52 @@ bool BiDiEngine::IsArabicDigit(wchar_t ch) noexcept {
     return (ch >= 0x0660 && ch <= 0x0669);
 }
 
+int BiDiEngine::DigitToInt(wchar_t ch) noexcept {
+    if (ch >= L'0' && ch <= L'9') return ch - L'0';
+    if (ch >= 0x06F0 && ch <= 0x06F9) return ch - 0x06F0; // Persian digits ۰-۹
+    if (ch >= 0x0660 && ch <= 0x0669) return ch - 0x0660; // Arabic digits ٠-٩
+    return -1;
+}
+
+std::wstring BiDiEngine::ToPersianDigits(int number) {
+    if (number == 0) return L"۰";
+    bool negative = number < 0;
+    long long n = std::abs(static_cast<long long>(number));
+    std::wstring result;
+    while (n > 0) {
+        wchar_t pDigit = static_cast<wchar_t>(0x06F0 + (n % 10));
+        result.push_back(pDigit);
+        n /= 10;
+    }
+    if (negative) result.push_back(L'-');
+    std::reverse(result.begin(), result.end());
+    return result;
+}
+
+std::wstring BiDiEngine::ToPersianDigits(const std::wstring& input) {
+    std::wstring result = input;
+    for (wchar_t& ch : result) {
+        if (ch >= L'0' && ch <= L'9') {
+            ch = static_cast<wchar_t>(0x06F0 + (ch - L'0'));
+        }
+    }
+    return result;
+}
+
+bool BiDiEngine::ParseNumber(const std::wstring& text, size_t startPos, int& outNumber, size_t& outCharsConsumed) {
+    outNumber = 0;
+    outCharsConsumed = 0;
+    size_t i = startPos;
+    while (i < text.size()) {
+        int val = DigitToInt(text[i]);
+        if (val < 0) break;
+        outNumber = outNumber * 10 + val;
+        i++;
+    }
+    outCharsConsumed = i - startPos;
+    return outCharsConsumed > 0;
+}
+
 TextDirection BiDiEngine::DetectFirstStrongDirection(const std::wstring& text) noexcept {
     for (wchar_t ch : text) {
         if (IsRTLChar(ch)) return TextDirection::RTL;

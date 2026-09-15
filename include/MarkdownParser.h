@@ -16,9 +16,19 @@ enum class MarkdownBlockType {
     OrderedListItem,
     TaskListItem,
     Blockquote,
+    AlertCallout,
     CodeBlock,
     Table,
     HorizontalRule
+};
+
+enum class AlertType {
+    None,
+    Note,       // [!NOTE], [!نکته], [!یادداشت]
+    Tip,        // [!TIP], [!راهنما], [!ترفند]
+    Important,  // [!IMPORTANT], [!مهم]
+    Warning,    // [!WARNING], [!هشدار]
+    Caution     // [!CAUTION], [!احتیاط], [!خطر]
 };
 
 enum class InlineStyleType {
@@ -28,9 +38,11 @@ enum class InlineStyleType {
     BoldItalic,
     Strikethrough,
     Underline,
+    Highlight,
     InlineCode,
     Link,
-    Image
+    Image,
+    InlineMath
 };
 
 struct MarkdownSpan {
@@ -73,6 +85,8 @@ struct MarkdownBlock {
     std::vector<std::wstring> codeLines;
     MarkdownTable table;
     bool isRTL = false;
+    AlertType alertType = AlertType::None;
+    std::wstring alertTitle;
 };
 
 struct MarkdownDocument {

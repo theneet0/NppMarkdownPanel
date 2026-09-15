@@ -79,18 +79,15 @@ bool MarkdownParser::ParseListItem(const std::wstring& line, MarkdownBlockType& 
         return true;
     }
 
-    // Ordered list: 1. or 1)
-    if (std::iswdigit(line[i])) {
-        size_t numStart = i;
-        while (i < line.size() && std::iswdigit(line[i])) i++;
-        if (i < line.size() && (line[i] == L'.' || line[i] == L')') && (i + 1 < line.size()) && (line[i + 1] == L' ' || line[i + 1] == L'\t')) {
+    // Ordered list: 1. or 1) or Persian ۱. or ۱)
+    int parsedNum = 0;
+    size_t numLen = 0;
+    if (BiDiEngine::ParseNumber(line, i, parsedNum, numLen)) {
+        size_t afterNum = i + numLen;
+        if (afterNum < line.size() && (line[afterNum] == L'.' || line[afterNum] == L')' || line[afterNum] == L'-') && (afterNum + 1 < line.size()) && (line[afterNum + 1] == L' ' || line[afterNum + 1] == L'\t')) {
             type = MarkdownBlockType::OrderedListItem;
-            try {
-                index = std::stoi(line.substr(numStart, i - numStart));
-            } catch (...) {
-                index = 1;
-            }
-            size_t start = i + 2;
+            index = parsedNum;
+            size_t start = afterNum + 2;
             while (start < line.size() && (line[start] == L' ' || line[start] == L'\t')) start++;
 
             // Task list can also be ordered e.g. 1. [ ] Task
@@ -291,6 +288,34 @@ std::vector<MarkdownSpan> MarkdownParser::ParseInlines(const std::wstring& text)
                 span.text = text.substr(i + 2, end - i - 2);
                 spans.push_back(span);
                 i = end + 2;
+                continue;
+            }
+        }
+
+        // 4b. Highlight: ==text==
+        if (text[i] == L'=' && i + 1 < text.size() && text[i + 1] == L'=') {
+            size_t end = text.find(L"==", i + 2);
+            if (end != std::wstring::npos) {
+                flushText();
+                MarkdownSpan span;
+                span.type = InlineStyleType::Highlight;
+                span.text = text.substr(i + 2, end - i - 2);
+                spans.push_back(span);
+                i = end + 2;
+                continue;
+            }
+        }
+
+        // 4c. Inline Math: $math$
+        if (text[i] == L'$' && i + 1 < text.size() && text[i + 1] != L'$' && (i == 0 || text[i - 1] != L'\\')) {
+            size_t end = text.find(L'$', i + 1);
+            if (end != std::wstring::npos && end > i + 1) {
+                flushText();
+                MarkdownSpan span;
+                span.type = InlineStyleType::InlineMath;
+                span.text = text.substr(i + 1, end - i - 1);
+                spans.push_back(span);
+                i = end + 1;
                 continue;
             }
         }
@@ -500,6 +525,53 @@ MarkdownDocument MarkdownParser::Parse(const std::wstring& markdownText) {
                 }
             }
             block.sourceLineEnd = static_cast<int>(lineIdx - 1);
+
+            // Detect GitHub / Persian Alert Callouts: [!NOTE], [!TIP], [!نکته], etc.
+            std::wstring trimmedBq = block.rawText;
+            while (!trimmedBq.empty() && (trimmedBq.front() == L' ' || trimmedBq.front() == L'\t')) trimmedBq.erase(0, 1);
+
+            auto startsWithNoCase = [](const std::wstring& str, const std::wstring& prefix) {
+                if (str.size() < prefix.size()) return false;
+                for (size_t k = 0; k < prefix.size(); ++k) {
+                    if (::towlower(str[k]) != ::towlower(prefix[k])) return false;
+                }
+                return true;
+            };
+
+            if (startsWithNoCase(trimmedBq, L"[!NOTE]") || startsWithNoCase(trimmedBq, L"[!نکته]") || startsWithNoCase(trimmedBq, L"[!یادداشت]")) {
+                block.type = MarkdownBlockType::AlertCallout;
+                block.alertType = AlertType::Note;
+                block.alertTitle = startsWithNoCase(trimmedBq, L"[!NOTE]") ? L"Note" : L"نکته";
+                size_t close = trimmedBq.find(L']');
+                block.rawText = (close != std::wstring::npos && close + 1 < trimmedBq.size()) ? trimmedBq.substr(close + 1) : L"";
+            } else if (startsWithNoCase(trimmedBq, L"[!TIP]") || startsWithNoCase(trimmedBq, L"[!راهنما]") || startsWithNoCase(trimmedBq, L"[!ترفند]")) {
+                block.type = MarkdownBlockType::AlertCallout;
+                block.alertType = AlertType::Tip;
+                block.alertTitle = startsWithNoCase(trimmedBq, L"[!TIP]") ? L"Tip" : L"ترفند";
+                size_t close = trimmedBq.find(L']');
+                block.rawText = (close != std::wstring::npos && close + 1 < trimmedBq.size()) ? trimmedBq.substr(close + 1) : L"";
+            } else if (startsWithNoCase(trimmedBq, L"[!IMPORTANT]") || startsWithNoCase(trimmedBq, L"[!مهم]")) {
+                block.type = MarkdownBlockType::AlertCallout;
+                block.alertType = AlertType::Important;
+                block.alertTitle = startsWithNoCase(trimmedBq, L"[!IMPORTANT]") ? L"Important" : L"مهم";
+                size_t close = trimmedBq.find(L']');
+                block.rawText = (close != std::wstring::npos && close + 1 < trimmedBq.size()) ? trimmedBq.substr(close + 1) : L"";
+            } else if (startsWithNoCase(trimmedBq, L"[!WARNING]") || startsWithNoCase(trimmedBq, L"[!هشدار]")) {
+                block.type = MarkdownBlockType::AlertCallout;
+                block.alertType = AlertType::Warning;
+                block.alertTitle = startsWithNoCase(trimmedBq, L"[!WARNING]") ? L"Warning" : L"هشدار";
+                size_t close = trimmedBq.find(L']');
+                block.rawText = (close != std::wstring::npos && close + 1 < trimmedBq.size()) ? trimmedBq.substr(close + 1) : L"";
+            } else if (startsWithNoCase(trimmedBq, L"[!CAUTION]") || startsWithNoCase(trimmedBq, L"[!احتیاط]") || startsWithNoCase(trimmedBq, L"[!خطر]")) {
+                block.type = MarkdownBlockType::AlertCallout;
+                block.alertType = AlertType::Caution;
+                block.alertTitle = startsWithNoCase(trimmedBq, L"[!CAUTION]") ? L"Caution" : L"احتیاط";
+                size_t close = trimmedBq.find(L']');
+                block.rawText = (close != std::wstring::npos && close + 1 < trimmedBq.size()) ? trimmedBq.substr(close + 1) : L"";
+            }
+
+            while (!block.rawText.empty() && (block.rawText.front() == L' ' || block.rawText.front() == L'\t')) block.rawText.erase(0, 1);
+
             block.inlines = ParseInlines(block.rawText);
             block.isRTL = BiDiEngine::IsParagraphRTL(block.rawText);
             doc.blocks.push_back(block);
