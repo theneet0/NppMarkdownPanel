@@ -2,7 +2,6 @@
 
 #define IDI_ICON_PANEL                 101
 #define IDB_TOOLBAR_BMP                102
-#define IDI_ICON_PANEL_DARK            103
 
 // Plugin Commands
 #define CMD_TOGGLE_PANEL               0

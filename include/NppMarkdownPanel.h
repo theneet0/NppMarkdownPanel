@@ -51,7 +51,6 @@ private:
     bool CreatePanelWindow();
     void RequestRenderDebounced();
     void ExecuteRender();
-    void UpdateScrollbars();
     std::wstring GetCurrentBufferPath() const;
     bool IsCurrentBufferMarkdown() const;
 
