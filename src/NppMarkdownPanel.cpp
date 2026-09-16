@@ -437,7 +437,10 @@ void NppMarkdownPanel::ExecuteRender() {
         );
 
         if (m_webViewViewer.IsPageReady()) {
-            m_webViewViewer.UpdateContent(components.bodyHtml, components.tocHtml, components.statsText);
+            std::string titleUtf8 = BiDiEngine::WideToUtf8(docTitle);
+            if (!m_webViewViewer.UpdateContent(components.bodyHtml, components.tocHtml, components.statsText, titleUtf8, isDark)) {
+                m_webViewViewer.SetHtmlContent(components.fullHtml);
+            }
         } else {
             m_webViewViewer.SetHtmlContent(components.fullHtml);
         }

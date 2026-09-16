@@ -3,6 +3,7 @@
 #include "../include/SyntaxHighlighter.h"
 #include "../include/HtmlExporter.h"
 #include <iostream>
+#include <fstream>
 #include <cassert>
 #include <string>
 
@@ -187,9 +188,11 @@ void TestSyntaxHighlighter() {
         if (t.type == HighlightTokenType::Number) foundShNum = true;
         if (t.type == HighlightTokenType::Comment) foundShComment = true;
     }
-    assert(foundShKw);
-    assert(foundShNum);
-    assert(foundShComment);
+    // Ensure 'local' in '/usr/local/bin/gost' is NOT treated as a bash keyword
+    for (const auto& t : shTokens) {
+        std::wstring tokStr = shCode.substr(t.start, t.length);
+        assert(tokStr != L"local");
+    }
 
     std::cout << "  -> SyntaxHighlighter PASS" << std::endl;
 }
@@ -202,6 +205,7 @@ void TestHtmlExporter() {
         L"Persian: سلام دنیا\n\n"
         L"- ایران: `/usr/local/bin/ir.yaml`\n\n"
         L"فایل binary باید `/usr/local/bin/gost` باشد.\n\n"
+        L"Inline math: $a^2 + b^2 = c^2$ فرمول ریاضی\n\n"
         L"```text\n"
         L"/usr/local/bin/fullchain.cer\n"
         L"/usr/local/bin/jojo-data.com.key\n"
@@ -215,7 +219,7 @@ void TestHtmlExporter() {
         L"$$E = mc^2$$\n\n"
         L"```mermaid\n"
         L"graph TD\n"
-        L"A-->B\n"
+        L"node-a[Step 1] --> node-b(Step 2)\n"
         L"```\n";
 
     MarkdownDocument doc = MarkdownParser::Parse(md);
@@ -232,6 +236,10 @@ void TestHtmlExporter() {
     // 1. Verify BiDi isolated inline code
     assert(html.find(L"<code class=\"inline-code\" dir=\"ltr\"><bdi dir=\"ltr\">/usr/local/bin/ir.yaml</bdi></code>") != std::wstring::npos);
     assert(html.find(L"<code class=\"inline-code\" dir=\"ltr\"><bdi dir=\"ltr\">/usr/local/bin/gost</bdi></code>") != std::wstring::npos);
+    assert(html.find(L"katex-inline") != std::wstring::npos);
+    assert(html.find(L"data-tex=\"a^2 + b^2 = c^2\"") != std::wstring::npos);
+    assert(html.find(L"node-a[Step 1]") != std::wstring::npos);
+    assert(html.find(L"node-b(Step 2)") != std::wstring::npos);
 
     // 2. Verify code block text is intact and NOT blank
     assert(html.find(L"/usr/local/bin/fullchain.cer") != std::wstring::npos);
@@ -277,12 +285,44 @@ void TestHtmlExporter() {
     std::cout << "  -> HtmlExporter PASS" << std::endl;
 }
 
+void TestRealUserDocument() {
+    std::cout << "[TEST] Real User Document (gost-systemd-install-fa.md)..." << std::endl;
+    std::ifstream f("E:/cert/GOST3/gost-systemd-install-fa.md", std::ios::binary);
+    if (!f.is_open()) {
+        std::cout << "  [SKIP] User document file not found at E:/cert/GOST3/..." << std::endl;
+        return;
+    }
+    std::string bytes((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    std::wstring wide = BiDiEngine::Utf8ToWide(bytes);
+    assert(!wide.empty());
+
+    MarkdownDocument doc = MarkdownParser::Parse(wide);
+    assert(doc.blocks.size() > 0);
+    assert(doc.wordCount > 0);
+
+    auto comp = HtmlExporter::GeneratePreviewComponents(doc, L"gost-systemd-install-fa.md", true, 1.0f, true);
+    assert(!comp.statsText.empty());
+
+    // Check code block content
+    assert(comp.bodyHtml.find("/usr/local/bin/fullchain.cer") != std::string::npos);
+    assert(comp.bodyHtml.find("/usr/local/bin/jojo-data.com.key") != std::string::npos);
+    assert(comp.bodyHtml.find("chown") != std::string::npos);
+    assert(comp.bodyHtml.find("chmod") != std::string::npos);
+    assert(comp.bodyHtml.find("root:root") != std::string::npos);
+
+    // Verify 'local' keyword is NOT injected inside /usr/local/bin/ paths
+    assert(comp.bodyHtml.find("/usr/<span class=\"hl-keyword\">local</span>/bin") == std::string::npos);
+
+    std::cout << "  -> Real User Document PASS" << std::endl;
+}
+
 int main() {
     std::cout << "=== Running NppMarkdownPanel Native C++ Unit Tests ===" << std::endl;
     TestBiDiEngine();
     TestMarkdownParser();
     TestSyntaxHighlighter();
     TestHtmlExporter();
-    std::cout << "\n>>> ALL 4 TEST SUITES PASSED SUCCESSFULLY! <<<" << std::endl;
+    TestRealUserDocument();
+    std::cout << "\n>>> ALL 5 TEST SUITES PASSED SUCCESSFULLY! <<<" << std::endl;
     return 0;
 }

@@ -1,4 +1,5 @@
 #include "../include/WebView2Viewer.h"
+#include "../include/BiDiEngine.h"
 #include <initguid.h>
 #include "../packages/Microsoft.Web.WebView2.1.0.3650.58/build/native/include/WebView2.h"
 #include <shlwapi.h>
@@ -302,10 +303,7 @@ void WebView2Viewer::SetVisible(bool visible) {
 namespace {
 std::wstring EscapeJsonWide(const std::string& utf8Str) {
     if (utf8Str.empty()) return L"";
-    int wideLen = MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, nullptr, 0);
-    if (wideLen <= 0) return L"";
-    std::wstring wide(wideLen - 1, L'\0');
-    MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, &wide[0], wideLen);
+    std::wstring wide = BiDiEngine::Utf8ToWide(utf8Str);
 
     std::wstringstream ss;
     for (wchar_t ch : wide) {
@@ -339,15 +337,13 @@ void WebView2Viewer::SetHtmlContent(const std::string& htmlUtf8) {
     }
 
     m_pageReady = false;
-    int wideLen = MultiByteToWideChar(CP_UTF8, 0, htmlUtf8.c_str(), -1, nullptr, 0);
-    if (wideLen > 0) {
-        std::wstring wideHtml(wideLen, L'\0');
-        MultiByteToWideChar(CP_UTF8, 0, htmlUtf8.c_str(), -1, &wideHtml[0], wideLen);
+    std::wstring wideHtml = BiDiEngine::Utf8ToWide(htmlUtf8);
+    if (!wideHtml.empty()) {
         m_pWebView->NavigateToString(wideHtml.c_str());
     }
 }
 
-bool WebView2Viewer::UpdateContent(const std::string& bodyHtml, const std::string& tocHtml, const std::string& statsText) {
+bool WebView2Viewer::UpdateContent(const std::string& bodyHtml, const std::string& tocHtml, const std::string& statsText, const std::string& title, bool isDark) {
     if (!m_isInitialized || !m_pWebView || !m_pageReady) {
         return false;
     }
@@ -355,7 +351,9 @@ bool WebView2Viewer::UpdateContent(const std::string& bodyHtml, const std::strin
     std::wstringstream json;
     json << L"{\"type\":\"updateContent\",\"body\":\"" << EscapeJsonWide(bodyHtml)
          << L"\",\"toc\":\"" << EscapeJsonWide(tocHtml)
-         << L"\",\"stats\":\"" << EscapeJsonWide(statsText) << L"\"}";
+         << L"\",\"stats\":\"" << EscapeJsonWide(statsText)
+         << L"\",\"title\":\"" << EscapeJsonWide(title)
+         << L"\",\"isDark\":" << (isDark ? L"true" : L"false") << L"}";
 
     HRESULT hr = m_pWebView->PostWebMessageAsJson(json.str().c_str());
     return SUCCEEDED(hr);

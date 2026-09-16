@@ -32,7 +32,7 @@ public:
 
     // Content updates
     void SetHtmlContent(const std::string& htmlUtf8);
-    bool UpdateContent(const std::string& bodyHtml, const std::string& tocHtml, const std::string& statsText);
+    bool UpdateContent(const std::string& bodyHtml, const std::string& tocHtml, const std::string& statsText, const std::string& title = "", bool isDark = false);
     void ExecuteScript(const std::wstring& script);
 
     // Visual settings

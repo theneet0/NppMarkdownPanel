@@ -638,15 +638,29 @@ MarkdownDocument MarkdownParser::Parse(const std::wstring& markdownText) {
     }
 
     // Calculate document statistics
-    for (const auto& block : doc.blocks) {
-        doc.charCount += block.rawText.size();
+    auto countWordsInString = [&](const std::wstring& str) {
+        doc.charCount += str.size();
         bool inWord = false;
-        for (wchar_t ch : block.rawText) {
+        for (wchar_t ch : str) {
             if (std::iswspace(ch) || ch == 0x200C) {
                 inWord = false;
             } else if (!inWord) {
                 inWord = true;
                 doc.wordCount++;
+            }
+        }
+    };
+
+    for (const auto& block : doc.blocks) {
+        if (!block.rawText.empty()) {
+            countWordsInString(block.rawText);
+        }
+        for (const auto& cl : block.codeLines) {
+            countWordsInString(cl);
+        }
+        for (const auto& row : block.table.rows) {
+            for (const auto& cell : row.cells) {
+                countWordsInString(cell.text);
             }
         }
     }

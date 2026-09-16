@@ -188,7 +188,19 @@ std::vector<HighlightToken> SyntaxHighlighter::Tokenize(const std::wstring& line
             token.start = start;
             token.length = i - start;
 
-            if (isPy) {
+            bool isBoundedInPath = false;
+            if (isSh || isYaml) {
+                if (start > 0 && (line[start - 1] == L'/' || line[start - 1] == L'\\' || line[start - 1] == L'.' || line[start - 1] == L'-' || line[start - 1] == L':')) {
+                    isBoundedInPath = true;
+                }
+                if (i < line.size() && (line[i] == L'/' || line[i] == L'\\' || line[i] == L'.' || line[i] == L'-' || line[i] == L':')) {
+                    isBoundedInPath = true;
+                }
+            }
+
+            if (isBoundedInPath) {
+                token.type = HighlightTokenType::Default;
+            } else if (isPy) {
                 if (s_pythonKeywords.count(word)) token.type = HighlightTokenType::Keyword;
                 else token.type = HighlightTokenType::Default;
             } else if (isJs) {

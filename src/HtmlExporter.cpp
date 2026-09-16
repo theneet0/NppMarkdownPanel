@@ -1022,11 +1022,23 @@ function renderLocalMath() {
           .replace(/(?![^<]*>)([a-zA-Z])/g, '<mi>$1</mi>');
     }
 
+    // 1. Process explicit .katex-inline elements
+    var inlines = container.querySelectorAll(".katex-inline");
+    inlines.forEach(function(el) {
+        if (el.querySelector("math")) return;
+        var tex = el.getAttribute("data-tex") || el.textContent.trim().replace(/^\$|\$$/g, '');
+        if (tex) {
+            el.innerHTML = texToMathML(tex, false);
+            el.classList.add("katex");
+        }
+    });
+
+    // 2. Process display math blocks ($$...$$) and remaining inline math in text
     var walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
     var textNodes = [];
     while (walker.nextNode()) {
         var node = walker.currentNode;
-        if (node.parentElement && (node.parentElement.tagName === "PRE" || node.parentElement.tagName === "CODE" || node.parentElement.tagName === "SCRIPT" || node.parentElement.tagName === "STYLE" || node.parentElement.closest("pre, code, .katex"))) continue;
+        if (node.parentElement && (node.parentElement.tagName === "PRE" || node.parentElement.tagName === "CODE" || node.parentElement.tagName === "SCRIPT" || node.parentElement.tagName === "STYLE" || node.parentElement.closest("pre, code, math, .katex-inline"))) continue;
         if (node.nodeValue.indexOf("$") !== -1) {
             textNodes.push(node);
         }
@@ -1086,8 +1098,11 @@ function renderLocalMermaid() {
     var labelBg = isDark ? "#21262d" : "#f6f8fa";
 
     blocks.forEach(function(block) {
-        if (block.querySelector("svg")) return;
-        var code = block.textContent.trim();
+        var code = block.getAttribute("data-code");
+        if (!code) {
+            code = block.textContent.trim();
+            block.setAttribute("data-code", code);
+        }
         var lines = code.split("\n").map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
         if (lines.length === 0) return;
 
@@ -1105,17 +1120,22 @@ function renderLocalMermaid() {
             return nodes[id];
         }
 
+        function cleanLabel(raw) {
+            if (!raw) return "";
+            return raw.replace(/^[\[\(\{]+|[\]\)\}]+$/g, '').trim();
+        }
+
         for (var i = 0; i < lines.length; i++) {
             var line = lines[i];
             if (line.indexOf("graph") === 0 || line.indexOf("flowchart") === 0) continue;
 
-            var edgeMatch = line.match(/^([a-zA-Z0-9_]+)(?:\[(.*?)\])?\s*(?:-->|---\s*\|(.*?)\|\s*-->|-->\|(.*?)\||\-\-\>)\s*([a-zA-Z0-9_]+)(?:\[(.*?)\])?$/);
+            var edgeMatch = line.match(/^([a-zA-Z0-9_\-]+)(?:([\[\(\{].*?[\]\)\}]))?\s*(?:(-->|==>|-\.->|---)\s*(?:\|(.*?)\|)?|---\s*\|(.*?)\|\s*-->|-->\|(.*?)\|)\s*([a-zA-Z0-9_\-]+)(?:([\[\(\{].*?[\]\)\}]))?$/);
             if (edgeMatch) {
                 var uId = edgeMatch[1];
-                var uText = edgeMatch[2] || uId;
-                var edgeLabel = edgeMatch[3] || edgeMatch[4] || "";
-                var vId = edgeMatch[5];
-                var vText = edgeMatch[6] || vId;
+                var uText = cleanLabel(edgeMatch[2]) || uId;
+                var edgeLabel = edgeMatch[4] || edgeMatch[5] || edgeMatch[6] || "";
+                var vId = edgeMatch[7];
+                var vText = cleanLabel(edgeMatch[8]) || vId;
 
                 addNode(uId, uText);
                 addNode(vId, vText);
@@ -1123,9 +1143,9 @@ function renderLocalMermaid() {
                 nodes[vId].inEdges++;
                 edges.push({ from: uId, to: vId, label: edgeLabel });
             } else {
-                var single = line.match(/^([a-zA-Z0-9_]+)\[(.*?)\]$/);
+                var single = line.match(/^([a-zA-Z0-9_\-]+)(?:([\[\(\{].*?[\]\)\}]))$/);
                 if (single) {
-                    addNode(single[1], single[2]);
+                    addNode(single[1], cleanLabel(single[2]) || single[1]);
                 }
             }
         }
@@ -1265,6 +1285,23 @@ function handleTaskCheck(cb) {
     }
 }
 
+function fallbackCopy(text, onSuccess) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    ta.style.top = "-9999px";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try {
+        document.execCommand("copy");
+        if (onSuccess) onSuccess();
+    } catch(e) {}
+    document.body.removeChild(ta);
+}
+
 // Copy single code block
 function copyCodeBlock(btn) {
     var card = btn.closest(".code-block-card");
@@ -1272,7 +1309,8 @@ function copyCodeBlock(btn) {
     var code = card.querySelector("pre code");
     if (!code) code = card.querySelector("pre");
     if (!code) return;
-    navigator.clipboard.writeText(code.innerText).then(function() {
+    var text = code.innerText;
+    var onSuccess = function() {
         var oldText = btn.innerHTML;
         btn.innerHTML = "✓ Copied!";
         btn.classList.add("copied");
@@ -1280,17 +1318,31 @@ function copyCodeBlock(btn) {
             btn.innerHTML = oldText;
             btn.classList.remove("copied");
         }, 1800);
-    });
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(onSuccess).catch(function() {
+            fallbackCopy(text, onSuccess);
+        });
+    } else {
+        fallbackCopy(text, onSuccess);
+    }
 }
 
 // Copy full HTML
 function copyFullHtml() {
     var c = document.getElementById("content-container").innerHTML;
-    navigator.clipboard.writeText(c).then(function() {
+    var onSuccess = function() {
         var btn = document.getElementById("btn-copy-html");
         btn.innerHTML = "✓";
         setTimeout(function() { btn.innerHTML = "📋"; }, 1500);
-    });
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(c).then(onSuccess).catch(function() {
+            fallbackCopy(c, onSuccess);
+        });
+    } else {
+        fallbackCopy(c, onSuccess);
+    }
 }
 
 // Theme toggle
@@ -1461,6 +1513,13 @@ if (window.chrome && window.chrome.webview) {
             try { data = JSON.parse(data); } catch(e) {}
         }
         if (data && data.type === "updateContent") {
+            if (typeof data.title === "string" && data.title) {
+                document.title = data.title;
+            }
+            if (typeof data.isDark === "boolean") {
+                if (data.isDark) document.body.classList.add("dark");
+                else document.body.classList.remove("dark");
+            }
             var content = document.getElementById("content-container");
             if (content && typeof data.body === "string") {
                 content.innerHTML = data.body;
@@ -1590,7 +1649,8 @@ std::wstring HtmlExporter::InlinesToHtml(const std::vector<MarkdownSpan>& inline
                 break;
             }
             case InlineStyleType::InlineMath:
-                ss << L"<span class=\"katex-inline katex\" dir=\"ltr\"><bdi dir=\"ltr\">$"
+                ss << L"<span class=\"katex-inline\" dir=\"ltr\" data-tex=\""
+                   << EscapeHtml(span.text) << L"\"><bdi dir=\"ltr\">$"
                    << EscapeHtml(span.text) << L"$</bdi></span>";
                 break;
             case InlineStyleType::Link:
