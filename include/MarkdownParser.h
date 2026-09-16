@@ -91,8 +91,6 @@ struct MarkdownBlock {
 
 struct MarkdownDocument {
     std::vector<MarkdownBlock> blocks;
-    size_t wordCount = 0;
-    size_t charCount = 0;
     size_t headingCount = 0;
 };
 

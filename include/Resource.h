@@ -15,9 +15,8 @@
 #define CMD_ZOOM_OUT                   7
 #define CMD_ZOOM_RESET                 8
 #define CMD_TOGGLE_BIDI                9
-#define CMD_SETTINGS                   10
-#define CMD_ABOUT                      11
-#define NB_PLUGIN_COMMANDS             12
+#define CMD_ABOUT                      10
+#define NB_PLUGIN_COMMANDS             11
 
 // Panel UI Child IDs
 #define IDC_PANEL_TOOLBAR              2001
@@ -29,7 +28,6 @@
 #define IDC_BTN_EXPORT_HTML            2007
 #define IDC_BTN_SYNC_TOGGLE            2008
 #define IDC_BTN_BIDI_TOGGLE            2009
-#define IDC_STATIC_STATS               2010
 
 // Timer IDs
 #define IDT_RENDER_DEBOUNCE            3001

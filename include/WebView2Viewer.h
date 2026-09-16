@@ -17,6 +17,10 @@ public:
     using SyncCallback = std::function<void()>;
     using ThemeCallback = std::function<void()>;
     using TocCallback = std::function<void(bool isOpen)>;
+    using ZoomInCallback = std::function<void()>;
+    using ZoomOutCallback = std::function<void()>;
+    using ZoomResetCallback = std::function<void()>;
+    using ZoomChangeCallback = std::function<void(float factor)>;
 
     WebView2Viewer();
     ~WebView2Viewer();
@@ -35,7 +39,7 @@ public:
 
     // Content updates
     void SetHtmlContent(const std::string& htmlUtf8);
-    bool UpdateContent(const std::string& bodyHtml, const std::string& tocHtml, const std::string& statsText, const std::string& title = "", bool isDark = false);
+    bool UpdateContent(const std::string& bodyHtml, const std::string& tocHtml, const std::string& title = "", bool isDark = false);
     void ExecuteScript(const std::wstring& script);
 
     // Visual settings
@@ -48,6 +52,10 @@ public:
     void SetSyncCallback(SyncCallback cb) { m_syncCallback = cb; }
     void SetThemeCallback(ThemeCallback cb) { m_themeCallback = cb; }
     void SetTocCallback(TocCallback cb) { m_tocCallback = cb; }
+    void SetZoomInCallback(ZoomInCallback cb) { m_zoomInCallback = cb; }
+    void SetZoomOutCallback(ZoomOutCallback cb) { m_zoomOutCallback = cb; }
+    void SetZoomResetCallback(ZoomResetCallback cb) { m_zoomResetCallback = cb; }
+    void SetZoomChangeCallback(ZoomChangeCallback cb) { m_zoomChangeCallback = cb; }
 
     // Actions
     void ScrollToLine(int line);
@@ -75,6 +83,10 @@ private:
     SyncCallback m_syncCallback;
     ThemeCallback m_themeCallback;
     TocCallback m_tocCallback;
+    ZoomInCallback m_zoomInCallback;
+    ZoomOutCallback m_zoomOutCallback;
+    ZoomResetCallback m_zoomResetCallback;
+    ZoomChangeCallback m_zoomChangeCallback;
 
     // Internal initialization completion
     void OnEnvironmentCreated(HRESULT result, ICoreWebView2Environment* env);

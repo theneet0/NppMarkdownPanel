@@ -28,6 +28,16 @@ $bin32Dir = Join-Path $binDir "x86"
 if (-not (Test-Path $binDir)) { New-Item -ItemType Directory -Path $binDir | Out-Null }
 if (-not (Test-Path $bin32Dir)) { New-Item -ItemType Directory -Path $bin32Dir | Out-Null }
 
+# Ensure WebView2 package is present from local nuget cache
+$wv2PkgDir = Join-Path $scriptDir "packages\Microsoft.Web.WebView2.1.0.3650.58"
+if (-not (Test-Path "$wv2PkgDir\build\native\include\WebView2.h")) {
+    $nugetCache = Join-Path $env:USERPROFILE ".nuget\packages\microsoft.web.webview2\1.0.3650.58"
+    if (Test-Path "$nugetCache\build\native\include\WebView2.h") {
+        New-Item -ItemType Directory -Path (Split-Path -Parent $wv2PkgDir) -Force | Out-Null
+        Copy-Item -Path $nugetCache -Destination $wv2PkgDir -Recurse -Force
+    }
+}
+
 # 2. Compile and run unit tests
 Write-Host "`n>>> [1/3] Building and running unit tests..." -ForegroundColor Yellow
 $testExe = Join-Path $binDir "test_suite.exe"

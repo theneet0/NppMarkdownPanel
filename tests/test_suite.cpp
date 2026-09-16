@@ -287,9 +287,20 @@ void TestHtmlExporter() {
     assert(!components.fullHtml.empty());
     assert(!components.bodyHtml.empty());
     assert(!components.tocHtml.empty());
-    assert(!components.statsText.empty());
     assert(components.bodyHtml.find("<!DOCTYPE") == std::string::npos); // Clean body fragment!
     assert(components.bodyHtml.find("/usr/local/bin/fullchain.cer") != std::string::npos);
+
+    // 6. Verify context menu zoom controls exist and reading stats are completely absent
+    assert(previewHtml.find("Zoom In") != std::string::npos);
+    assert(previewHtml.find("Zoom Out") != std::string::npos);
+    assert(previewHtml.find("Reset Zoom") != std::string::npos);
+    assert(previewHtml.find("zoomInFromMenu") != std::string::npos);
+    assert(previewHtml.find("zoomOutFromMenu") != std::string::npos);
+    assert(previewHtml.find("zoomResetFromMenu") != std::string::npos);
+    assert(previewHtml.find("min read") == std::string::npos);
+    assert(previewHtml.find("menu-stats") == std::string::npos);
+    assert(previewHtml.find("\u0645\u0637\u0627\u0644\u0639\u0647") == std::string::npos);
+
     std::cout << "  -> HtmlExporter PASS" << std::endl;
 }
 
@@ -306,10 +317,8 @@ void TestRealUserDocument() {
 
     MarkdownDocument doc = MarkdownParser::Parse(wide);
     assert(doc.blocks.size() > 0);
-    assert(doc.wordCount > 0);
 
     auto comp = HtmlExporter::GeneratePreviewComponents(doc, L"gost-systemd-install-fa.md", true, 1.0f, true);
-    assert(!comp.statsText.empty());
 
     // Check code block content
     assert(comp.bodyHtml.find("/usr/local/bin/fullchain.cer") != std::string::npos);

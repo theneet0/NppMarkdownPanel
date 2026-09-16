@@ -187,6 +187,22 @@ bool NppMarkdownPanel::CreatePanelWindow() {
                 SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdOutline, (LPARAM)(isOpen ? TRUE : FALSE));
             }
         });
+        m_webViewViewer.SetZoomInCallback([this]() {
+            ZoomIn();
+        });
+        m_webViewViewer.SetZoomOutCallback([this]() {
+            ZoomOut();
+        });
+        m_webViewViewer.SetZoomResetCallback([this]() {
+            ZoomReset();
+        });
+        m_webViewViewer.SetZoomChangeCallback([this](float factor) {
+            m_config.zoomLevel = factor;
+            if (m_config.zoomLevel < 0.2f) m_config.zoomLevel = 0.2f;
+            if (m_config.zoomLevel > 3.0f) m_config.zoomLevel = 3.0f;
+            m_webViewViewer.SetZoom(m_config.zoomLevel);
+            m_renderer.SetZoom(m_config.zoomLevel);
+        });
         NppLog("Modern WebView2 engine initialized successfully");
     } else {
         // Fallback to Direct2D Renderer
@@ -385,16 +401,6 @@ void NppMarkdownPanel::ToggleBiDi() {
     ExecuteRender();
 }
 
-void NppMarkdownPanel::ShowSettings() {
-    MessageBox(m_hPanel,
-        L"NppMarkdownPanel C++26 Native Edition\n\n"
-        L"Settings are loaded and saved automatically in NppMarkdownPanel.ini\n"
-        L"- Zero .NET dependencies\n"
-        L"- Pure Direct2D / DirectWrite GPU hardware acceleration\n"
-        L"- Seamless Auto Dark Mode and Persian BiDi Support",
-        L"Markdown Panel Settings", MB_OK | MB_ICONINFORMATION);
-}
-
 void NppMarkdownPanel::ShowAbout() {
     const wchar_t* aboutMsg =
         L"NppMarkdownPanel - Modern Native Edition (2026)\n"
@@ -465,7 +471,7 @@ void NppMarkdownPanel::ExecuteRender() {
 
         if (m_webViewViewer.IsPageReady()) {
             std::string titleUtf8 = BiDiEngine::WideToUtf8(docTitle);
-            if (!m_webViewViewer.UpdateContent(components.bodyHtml, components.tocHtml, components.statsText, titleUtf8, isDark)) {
+            if (!m_webViewViewer.UpdateContent(components.bodyHtml, components.tocHtml, titleUtf8, isDark)) {
                 m_webViewViewer.SetHtmlContent(components.fullHtml);
             }
         } else {

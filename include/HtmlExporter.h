@@ -8,7 +8,6 @@ struct PreviewComponents {
     std::string fullHtml;
     std::string bodyHtml;
     std::string tocHtml;
-    std::string statsText;
 };
 
 class HtmlExporter {

@@ -284,23 +284,6 @@ mark.search-match.active {
     margin: 5px 6px;
 }
 
-.menu-stats {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 10px;
-    font-size: 11px;
-    color: var(--text-secondary);
-    border-radius: 6px;
-    background: rgba(128, 128, 128, 0.08);
-}
-
-.menu-stats-text {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
 /* Toast Feedback Notification */
 .toast-notification {
     position: fixed;
@@ -1048,17 +1031,8 @@ PreviewComponents HtmlExporter::GeneratePreviewComponents(
     }
     closeOpenLists();
 
-    // Reading statistics
-    int estMinutes = static_cast<int>((std::max)(size_t(1), doc.wordCount / 200));
-    std::wstring statsText = std::to_wstring(doc.wordCount) + L" words \u2022 " + std::to_wstring(estMinutes) + L" min read";
-    if (doc.blocks.size() > 0 && doc.blocks[0].isRTL) {
-        statsText = BiDiEngine::ToPersianDigits(static_cast<int>(doc.wordCount)) + L" \u0648\u0627\u0698\u0647 \u2022 " +
-                    BiDiEngine::ToPersianDigits(estMinutes) + L" \u062F\u0642\u06CC\u0642\u0647 \u0645\u0637\u0627\u0644\u0639\u0647";
-    }
-
     std::string bodyHtmlUtf8 = WideToUtf8(bodyStream.str());
     std::string tocHtmlUtf8 = WideToUtf8(tocStream.str());
-    std::string statsTextUtf8 = WideToUtf8(statsText);
 
     std::stringstream html;
     html << "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n";
@@ -1097,6 +1071,22 @@ PreviewComponents HtmlExporter::GeneratePreviewComponents(
     <span class="menu-label" id="menu-toc-label">Outline / Table of Contents</span>
   </div>
   <div class="menu-separator"></div>
+  <div class="menu-item" onclick="zoomInFromMenu()">
+    <span class="menu-icon">🔍</span>
+    <span class="menu-label">Zoom In</span>
+    <span class="menu-shortcut">Ctrl++</span>
+  </div>
+  <div class="menu-item" onclick="zoomOutFromMenu()">
+    <span class="menu-icon">🔍</span>
+    <span class="menu-label">Zoom Out</span>
+    <span class="menu-shortcut">Ctrl+-</span>
+  </div>
+  <div class="menu-item" onclick="zoomResetFromMenu()">
+    <span class="menu-icon">🔍</span>
+    <span class="menu-label">Reset Zoom (100%)</span>
+    <span class="menu-shortcut">Ctrl+0</span>
+  </div>
+  <div class="menu-separator"></div>
   <div class="menu-item" onclick="toggleThemeFromMenu()">
     <span class="menu-icon">🌓</span>
     <span class="menu-label" id="menu-theme-label">Toggle Dark / Light Theme</span>
@@ -1114,13 +1104,6 @@ PreviewComponents HtmlExporter::GeneratePreviewComponents(
     <span class="menu-icon">📄</span>
     <span class="menu-label">Print / Save as PDF</span>
   </div>
-  <div class="menu-separator"></div>
-  <div class="menu-stats" id="menu-stats-item">
-    <span class="menu-icon">⏱️</span>
-    <span class="menu-stats-text" id="menu-stats-text">)HTML";
-    html << statsTextUtf8;
-    html << R"HTML(</span>
-  </div>
 </div>
 
 <div id="toc-backdrop" onclick="closeToc()"></div>
@@ -1134,7 +1117,7 @@ PreviewComponents HtmlExporter::GeneratePreviewComponents(
     <div class="toc-header">
       <div class="toc-title">
         <span>📑</span>
-        <span>Outline / فهرست مطالب</span>
+        <span>Outline / Table of Contents</span>
       </div>
       <button class="toc-close" title="Close (Escape)" onclick="closeToc()">✕</button>
     </div>
@@ -1598,6 +1581,27 @@ function toggleSyncFromMenu() {
     showToast(window._syncEnabled ? "🔄 Caret sync enabled" : "🔄 Caret sync disabled");
 }
 
+function zoomInFromMenu() {
+    closeContextMenu();
+    if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage("zoomIn");
+    }
+}
+
+function zoomOutFromMenu() {
+    closeContextMenu();
+    if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage("zoomOut");
+    }
+}
+
+function zoomResetFromMenu() {
+    closeContextMenu();
+    if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage("zoomReset");
+    }
+}
+
 function printFromMenu() {
     closeContextMenu();
     window.print();
@@ -1907,6 +1911,18 @@ document.addEventListener("keydown", function(e) {
         e.preventDefault();
         openSearch();
     }
+    if (e.ctrlKey || e.metaKey) {
+        if (e.key === "+" || e.key === "=") {
+            e.preventDefault();
+            zoomInFromMenu();
+        } else if (e.key === "-") {
+            e.preventDefault();
+            zoomOutFromMenu();
+        } else if (e.key === "0") {
+            e.preventDefault();
+            zoomResetFromMenu();
+        }
+    }
 });
 
 // Initialization & WebView2 Host Communication
@@ -1941,10 +1957,6 @@ if (window.chrome && window.chrome.webview) {
             if (toc && typeof data.toc === "string") {
                 toc.innerHTML = data.toc;
             }
-            var stats = document.getElementById("menu-stats-text");
-            if (stats && typeof data.stats === "string") {
-                stats.innerText = data.stats;
-            }
             renderLocalMath();
             renderLocalMermaid();
             if (typeof doSearch === "function") {
@@ -1959,7 +1971,7 @@ if (window.chrome && window.chrome.webview) {
 </html>
 )HTML";
 
-    return PreviewComponents{ html.str(), bodyHtmlUtf8, tocHtmlUtf8, statsTextUtf8 };
+    return PreviewComponents{ html.str(), bodyHtmlUtf8, tocHtmlUtf8 };
 }
 
 std::string HtmlExporter::GeneratePreviewHtml(

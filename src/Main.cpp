@@ -48,10 +48,6 @@ void CommandToggleBiDi() {
     NppMarkdownPanel::Instance().ToggleBiDi();
 }
 
-void CommandSettings() {
-    NppMarkdownPanel::Instance().ShowSettings();
-}
-
 void CommandAbout() {
     NppMarkdownPanel::Instance().ShowAbout();
 }
@@ -156,14 +152,7 @@ __declspec(dllexport) FuncItem * getFuncsArray(int *nbF) {
     g_funcItems[CMD_TOGGLE_BIDI]._init2Check = true;
     g_funcItems[CMD_TOGGLE_BIDI]._pShKey = nullptr;
 
-    // 10: Settings
-    wcscpy_s(g_funcItems[CMD_SETTINGS]._itemName, L"Settings...");
-    g_funcItems[CMD_SETTINGS]._pFunc = CommandSettings;
-    g_funcItems[CMD_SETTINGS]._cmdID = CMD_SETTINGS;
-    g_funcItems[CMD_SETTINGS]._init2Check = false;
-    g_funcItems[CMD_SETTINGS]._pShKey = nullptr;
-
-    // 11: About
+    // 10: About
     wcscpy_s(g_funcItems[CMD_ABOUT]._itemName, L"About Markdown Panel...");
     g_funcItems[CMD_ABOUT]._pFunc = CommandAbout;
     g_funcItems[CMD_ABOUT]._cmdID = CMD_ABOUT;

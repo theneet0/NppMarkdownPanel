@@ -26,7 +26,6 @@ public:
     void ZoomOut();
     void ZoomReset();
     void ToggleBiDi();
-    void ShowSettings();
     void ShowAbout();
 
     // Notepad++ Notifications
@@ -65,7 +64,6 @@ private:
     NppData m_nppData = {};
     HWND m_hPanel = nullptr;
     HWND m_hToolbar = nullptr;
-    HWND m_hStatsText = nullptr;
     tTbData m_tbData = {};
 
     PluginConfig m_config;

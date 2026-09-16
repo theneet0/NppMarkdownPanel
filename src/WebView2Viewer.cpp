@@ -343,7 +343,7 @@ void WebView2Viewer::SetHtmlContent(const std::string& htmlUtf8) {
     }
 }
 
-bool WebView2Viewer::UpdateContent(const std::string& bodyHtml, const std::string& tocHtml, const std::string& statsText, const std::string& title, bool isDark) {
+bool WebView2Viewer::UpdateContent(const std::string& bodyHtml, const std::string& tocHtml, const std::string& title, bool isDark) {
     if (!m_isInitialized || !m_pWebView || !m_pageReady) {
         return false;
     }
@@ -351,7 +351,6 @@ bool WebView2Viewer::UpdateContent(const std::string& bodyHtml, const std::strin
     std::wstringstream json;
     json << L"{\"type\":\"updateContent\",\"body\":\"" << EscapeJsonWide(bodyHtml)
          << L"\",\"toc\":\"" << EscapeJsonWide(tocHtml)
-         << L"\",\"stats\":\"" << EscapeJsonWide(statsText)
          << L"\",\"title\":\"" << EscapeJsonWide(title)
          << L"\",\"isDark\":" << (isDark ? L"true" : L"false") << L"}";
 
@@ -431,6 +430,40 @@ void WebView2Viewer::OnWebMessageReceived(const std::wstring& message) {
         bool isOpen = (stateStr == L"true");
         if (m_tocCallback) {
             m_tocCallback(isOpen);
+        }
+        return;
+    }
+
+    if (message == L"zoomIn") {
+        if (m_zoomInCallback) {
+            m_zoomInCallback();
+        }
+        return;
+    }
+
+    if (message == L"zoomOut") {
+        if (m_zoomOutCallback) {
+            m_zoomOutCallback();
+        }
+        return;
+    }
+
+    if (message == L"zoomReset") {
+        if (m_zoomResetCallback) {
+            m_zoomResetCallback();
+        }
+        return;
+    }
+
+    const std::wstring prefixZoomChange = L"zoomChange:";
+    if (message.find(prefixZoomChange) == 0) {
+        std::wstring factorStr = message.substr(prefixZoomChange.length());
+        float factor = static_cast<float>(_wtof(factorStr.c_str()));
+        if (factor > 0.1f && factor < 10.0f) {
+            SetZoom(factor);
+            if (m_zoomChangeCallback) {
+                m_zoomChangeCallback(factor);
+            }
         }
         return;
     }
