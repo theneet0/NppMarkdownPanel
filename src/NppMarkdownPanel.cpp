@@ -13,15 +13,13 @@ const wchar_t* s_renderCanvasClassName = L"NppMarkdownCanvasWindowClass";
 
 #ifdef _DEBUG
 void NppLog(const char* fmt, ...) {
-    FILE* f = fopen("C:\\Users\\Joestar\\.gemini\\antigravity\\scratch\\super-reasoner\\npp_debug.log", "a");
-    if (!f) return;
+    char buf[512];
     va_list args;
     va_start(args, fmt);
-    vfprintf(f, fmt, args);
+    vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
-    fprintf(f, "\n");
-    fflush(f);
-    fclose(f);
+    OutputDebugStringA(buf);
+    OutputDebugStringA("\n");
 }
 #else
 inline void NppLog(const char*, ...) {}
@@ -49,7 +47,6 @@ void NppMarkdownPanel::Init(HINSTANCE hInst, NppData nppData) {
     m_config.Load(m_configPath);
     m_config.isPanelVisible = false;
     m_isPanelVisible = false;
-    m_config.autoShowForMarkdown = false;
     m_config.showOutline = false;
 
     // CRITICAL: We do NOT call CreatePanelWindow() or send NPPM_DMMREGASDCKDLG here!
@@ -213,15 +210,6 @@ bool NppMarkdownPanel::CreatePanelWindow() {
         m_renderer.Initialize(m_hPanel);
         m_renderer.SetZoom(m_config.zoomLevel);
         m_renderer.SetDarkMode(isDark);
-
-        m_outlineView.Create(m_hPanel, m_hInst);
-        m_outlineView.SetDarkMode(isDark);
-        m_outlineView.SetCallback([](int line, void* userData) {
-            auto* panel = reinterpret_cast<NppMarkdownPanel*>(userData);
-            if (panel) {
-                panel->m_renderer.ScrollToSourceLine(line);
-            }
-        }, this);
         NppLog("Direct2D Fallback Renderer initialized");
     }
 
@@ -263,7 +251,6 @@ std::wstring NppMarkdownPanel::GetCurrentBufferPath() const {
 }
 
 bool NppMarkdownPanel::IsCurrentBufferMarkdown() const {
-    if (m_config.allowAllExtensions) return true;
     std::wstring path = GetCurrentBufferPath();
     if (path.empty()) return true; // New empty file
 
@@ -305,17 +292,12 @@ void NppMarkdownPanel::TogglePanel() {
 
 void NppMarkdownPanel::ToggleSyncWithCaret() {
     m_config.syncWithCaret = !m_config.syncWithCaret;
-    m_config.syncWithFirstLine = false;
     int cmdCaret = GetPluginCmdId(CMD_SYNC_CARET);
     if (cmdCaret > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdCaret, (LPARAM)(m_config.syncWithCaret ? TRUE : FALSE));
-    if (m_hPanel) {
-        SendMessage(GetDlgItem(m_hPanel, IDC_BTN_SYNC_TOGGLE), BM_SETCHECK, m_config.syncWithCaret ? BST_CHECKED : BST_UNCHECKED, 0);
-    }
 }
 
 void NppMarkdownPanel::ToggleOutline() {
     m_config.showOutline = !m_config.showOutline;
-    m_outlineView.Show(m_config.showOutline);
     if (m_useWebView2) {
         if (m_config.showOutline) {
             m_webViewViewer.ExecuteScript(L"if (typeof openToc === 'function') openToc();");
@@ -429,8 +411,8 @@ void NppMarkdownPanel::ExecuteRender() {
 
     if (wideContent == m_lastRawContent) {
         // Only sync caret position if text didn't change
-        if (m_config.syncWithCaret || m_config.syncWithFirstLine) {
-            int line = m_config.syncWithCaret ? GetScintillaCaretLine(hSci) : GetScintillaFirstVisibleLine(hSci);
+        if (m_config.syncWithCaret) {
+            int line = GetScintillaCaretLine(hSci);
             if (m_useWebView2) {
                 m_webViewViewer.ScrollToLine(line + 1);
             } else {
@@ -470,35 +452,21 @@ void NppMarkdownPanel::ExecuteRender() {
             m_webViewViewer.SetHtmlContent(components.fullHtml);
         }
 
-        if (m_config.syncWithCaret || m_config.syncWithFirstLine) {
-            int line = m_config.syncWithCaret ? GetScintillaCaretLine(hSci) : GetScintillaFirstVisibleLine(hSci);
+        if (m_config.syncWithCaret) {
+            int line = GetScintillaCaretLine(hSci);
             m_webViewViewer.ScrollToLine(line + 1);
         }
     } else {
-        // Update Outline View
-        std::vector<OutlineNode> outlineNodes;
-        for (const auto& block : m_currentDoc.blocks) {
-            if (block.type >= MarkdownBlockType::Header1 && block.type <= MarkdownBlockType::Header6) {
-                OutlineNode node;
-                node.level = block.level;
-                node.title = block.rawText;
-                node.sourceLine = block.sourceLineStart;
-                outlineNodes.push_back(node);
-            }
-        }
-        m_outlineView.SetHeadings(outlineNodes);
-
         // Layout in Renderer
         RECT rc;
         GetClientRect(m_hPanel, &rc);
-        float outlineW = (m_config.showOutline && m_outlineView.IsVisible()) ? 180.0f : 0.0f;
-        float clientW = static_cast<float>(rc.right - rc.left) - outlineW;
+        float clientW = static_cast<float>(rc.right - rc.left);
         m_renderer.SetDocument(m_currentDoc);
         m_renderer.Layout(clientW);
 
         // Sync scroll with current position
-        if (m_config.syncWithCaret || m_config.syncWithFirstLine) {
-            int line = m_config.syncWithCaret ? GetScintillaCaretLine(hSci) : GetScintillaFirstVisibleLine(hSci);
+        if (m_config.syncWithCaret) {
+            int line = GetScintillaCaretLine(hSci);
             m_renderer.ScrollToSourceLine(line);
         }
 
@@ -514,10 +482,10 @@ void NppMarkdownPanel::OnNotification(SCNotification* notifyCode) {
             RequestRenderDebounced();
         }
     } else if (notifyCode->nmhdr.code == SCN_UPDATEUI) {
-        if (m_isPanelVisible && (m_config.syncWithCaret || m_config.syncWithFirstLine)) {
+        if (m_isPanelVisible && m_config.syncWithCaret) {
             HWND hSci = GetCurrentScintilla();
             if (hSci) {
-                int line = m_config.syncWithCaret ? GetScintillaCaretLine(hSci) : GetScintillaFirstVisibleLine(hSci);
+                int line = GetScintillaCaretLine(hSci);
                 if (m_useWebView2) {
                     m_webViewViewer.ScrollToLine(line + 1);
                 } else {
@@ -538,7 +506,6 @@ void NppMarkdownPanel::OnDarkModeChanged() {
         m_webViewViewer.SetDarkMode(isDark);
     }
     m_renderer.SetDarkMode(isDark);
-    m_outlineView.SetDarkMode(isDark);
     if (m_hPanel) {
         InvalidateRect(m_hPanel, nullptr, TRUE);
     }
@@ -546,15 +513,6 @@ void NppMarkdownPanel::OnDarkModeChanged() {
 
 void NppMarkdownPanel::OnBufferActivated() {
     if (!m_isNppReady) return;
-
-    if (m_config.autoShowForMarkdown) {
-        bool isMd = IsCurrentBufferMarkdown();
-        if (isMd && !m_isPanelVisible) {
-            TogglePanel();
-        } else if (!isMd && m_isPanelVisible && !m_config.allowAllExtensions) {
-            TogglePanel();
-        }
-    }
 
     if (m_isPanelVisible) {
         m_lastRawContent.clear();
@@ -614,34 +572,6 @@ LRESULT CALLBACK NppMarkdownPanel::PanelWndProc(HWND hwnd, UINT msg, WPARAM wPar
             break;
         }
 
-        case WM_COMMAND: {
-            switch (LOWORD(wParam)) {
-                case IDC_BTN_REFRESH:
-                    self->m_lastRawContent.clear();
-                    self->ExecuteRender();
-                    break;
-                case IDC_BTN_OUTLINE:
-                    self->ToggleOutline();
-                    break;
-                case IDC_BTN_ZOOM_IN:
-                    self->ZoomIn();
-                    break;
-                case IDC_BTN_ZOOM_OUT:
-                    self->ZoomOut();
-                    break;
-                case IDC_BTN_COPY_HTML:
-                    self->CopyRenderedHtml();
-                    break;
-                case IDC_BTN_EXPORT_HTML:
-                    self->SaveAsHtml();
-                    break;
-                case IDC_BTN_SYNC_TOGGLE:
-                    self->ToggleSyncWithCaret();
-                    break;
-            }
-            return 0;
-        }
-
         case WM_SIZE: {
             UINT width = LOWORD(lParam);
             UINT height = HIWORD(lParam);
@@ -649,15 +579,7 @@ LRESULT CALLBACK NppMarkdownPanel::PanelWndProc(HWND hwnd, UINT msg, WPARAM wPar
             if (self->m_useWebView2) {
                 self->m_webViewViewer.Resize(0, 0, width, height);
             } else {
-                int toolbarH = 0;
-                float outlineW = (self->m_config.showOutline && self->m_outlineView.IsVisible()) ? 180.0f : 0.0f;
-
-                if (self->m_outlineView.IsVisible()) {
-                    self->m_outlineView.Resize(static_cast<int>(width - outlineW), toolbarH, static_cast<int>(outlineW), height - toolbarH);
-                }
-
-                self->m_renderer.Resize(static_cast<UINT>(width - outlineW), height - toolbarH);
-                InvalidateRect(hwnd, nullptr, FALSE);
+                self->m_renderer.Resize(width, height);
             }
             return 0;
         }

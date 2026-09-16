@@ -17,17 +17,7 @@
 #define CMD_ABOUT                      9
 #define NB_PLUGIN_COMMANDS             10
 
-// Panel UI Child IDs
-#define IDC_PANEL_TOOLBAR              2001
-#define IDC_BTN_REFRESH                2002
-#define IDC_BTN_OUTLINE                2003
-#define IDC_BTN_ZOOM_IN                2004
-#define IDC_BTN_ZOOM_OUT               2005
-#define IDC_BTN_COPY_HTML              2006
-#define IDC_BTN_EXPORT_HTML            2007
-#define IDC_BTN_SYNC_TOGGLE            2008
-#define IDC_BTN_BIDI_TOGGLE            2009
-
 // Timer IDs
 #define IDT_RENDER_DEBOUNCE            3001
 #define RENDER_DEBOUNCE_DELAY_MS       120
+

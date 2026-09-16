@@ -75,7 +75,6 @@ $pluginSources = @(
     (Join-Path $scriptDir "src\MarkdownParser.cpp"),
     (Join-Path $scriptDir "src\BiDiEngine.cpp"),
     (Join-Path $scriptDir "src\SyntaxHighlighter.cpp"),
-    (Join-Path $scriptDir "src\OutlineView.cpp"),
     (Join-Path $scriptDir "src\HtmlExporter.cpp"),
     (Join-Path $scriptDir "src\Config.cpp"),
     $resFile64
@@ -114,7 +113,6 @@ if (Get-Command $clang32 -ErrorAction SilentlyContinue) {
         (Join-Path $scriptDir "src\MarkdownParser.cpp"),
         (Join-Path $scriptDir "src\BiDiEngine.cpp"),
         (Join-Path $scriptDir "src\SyntaxHighlighter.cpp"),
-        (Join-Path $scriptDir "src\OutlineView.cpp"),
         (Join-Path $scriptDir "src\HtmlExporter.cpp"),
         (Join-Path $scriptDir "src\Config.cpp"),
         $resFile32

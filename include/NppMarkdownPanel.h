@@ -5,7 +5,6 @@
 #include "Docking.h"
 #include "Config.h"
 #include "MarkdownRenderer.h"
-#include "OutlineView.h"
 #include "WebView2Viewer.h"
 
 class NppMarkdownPanel {
@@ -61,13 +60,11 @@ private:
     HINSTANCE m_hInst = nullptr;
     NppData m_nppData = {};
     HWND m_hPanel = nullptr;
-    HWND m_hToolbar = nullptr;
     tTbData m_tbData = {};
 
     PluginConfig m_config;
     std::wstring m_configPath;
     MarkdownRenderer m_renderer;
-    OutlineView m_outlineView;
     WebView2Viewer m_webViewViewer;
     MarkdownDocument m_currentDoc;
 

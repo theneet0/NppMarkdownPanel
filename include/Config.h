@@ -6,16 +6,10 @@
 struct PluginConfig {
     bool isPanelVisible = false;
     bool syncWithCaret = true;
-    bool syncWithFirstLine = false;
     bool showOutline = false;
     float zoomLevel = 1.0f;
-    bool autoShowForMarkdown = false;
-    bool allowAllExtensions = false;
     bool isSmartBiDiEnabled = true;
     int darkModeOverride = -1; // -1: auto NPP, 0: Light, 1: Dark
-    float baseFontSize = 15.0f;
-    std::wstring fontFamily = L"Segoe UI";
-    std::wstring codeFontFamily = L"Consolas";
     std::wstring supportedExtensions = L".md,.markdown,.mdown,.mkd,.rst";
 
     bool IsExtensionSupported(const std::wstring& ext) const;
