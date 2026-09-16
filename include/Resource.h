@@ -7,16 +7,15 @@
 // Plugin Commands
 #define CMD_TOGGLE_PANEL               0
 #define CMD_SYNC_CARET                 1
-#define CMD_SYNC_FIRST_LINE            2
-#define CMD_TOGGLE_OUTLINE             3
-#define CMD_COPY_HTML                  4
-#define CMD_SAVE_HTML                  5
-#define CMD_ZOOM_IN                    6
-#define CMD_ZOOM_OUT                   7
-#define CMD_ZOOM_RESET                 8
-#define CMD_TOGGLE_BIDI                9
-#define CMD_ABOUT                      10
-#define NB_PLUGIN_COMMANDS             11
+#define CMD_TOGGLE_OUTLINE             2
+#define CMD_COPY_HTML                  3
+#define CMD_SAVE_HTML                  4
+#define CMD_ZOOM_IN                    5
+#define CMD_ZOOM_OUT                   6
+#define CMD_ZOOM_RESET                 7
+#define CMD_TOGGLE_BIDI                8
+#define CMD_ABOUT                      9
+#define NB_PLUGIN_COMMANDS             10
 
 // Panel UI Child IDs
 #define IDC_PANEL_TOOLBAR              2001

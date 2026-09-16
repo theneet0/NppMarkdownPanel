@@ -119,6 +119,32 @@ public:
     }
 };
 
+class ZoomFactorChangedHandler : public ICoreWebView2ZoomFactorChangedEventHandler {
+    LONG m_ref = 1;
+    std::function<HRESULT(ICoreWebView2Controller*, IUnknown*)> m_func;
+public:
+    ZoomFactorChangedHandler(std::function<HRESULT(ICoreWebView2Controller*, IUnknown*)> func) : m_func(func) {}
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override {
+        if (!ppvObject) return E_POINTER;
+        if (riid == IID_IUnknown || riid == IID_ICoreWebView2ZoomFactorChangedEventHandler) {
+            *ppvObject = static_cast<ICoreWebView2ZoomFactorChangedEventHandler*>(this);
+            AddRef();
+            return S_OK;
+        }
+        *ppvObject = nullptr;
+        return E_NOINTERFACE;
+    }
+    ULONG STDMETHODCALLTYPE AddRef() override { return InterlockedIncrement(&m_ref); }
+    ULONG STDMETHODCALLTYPE Release() override {
+        ULONG ref = InterlockedDecrement(&m_ref);
+        if (ref == 0) delete this;
+        return ref;
+    }
+    HRESULT STDMETHODCALLTYPE Invoke(ICoreWebView2Controller* sender, IUnknown* args) override {
+        return m_func ? m_func(sender, args) : S_OK;
+    }
+};
+
 std::wstring GetModuleDir() {
     wchar_t path[MAX_PATH] = { 0 };
     HMODULE hMod = nullptr;
@@ -273,6 +299,24 @@ void WebView2Viewer::OnControllerCreated(HRESULT result, ICoreWebView2Controller
             }
         );
         m_pWebView->add_NavigationStarting(navHandler, &navToken);
+
+        // Register ZoomFactorChanged handler to sync native browser zoom (e.g. Ctrl+Wheel / pinch)
+        EventRegistrationToken zoomToken;
+        auto* zoomHandler = new ZoomFactorChangedHandler(
+            [this](ICoreWebView2Controller* sender, IUnknown* /*args*/) -> HRESULT {
+                if (sender) {
+                    double factor = 1.0;
+                    if (SUCCEEDED(sender->get_ZoomFactor(&factor))) {
+                        m_zoom = static_cast<float>(factor);
+                        if (m_zoomChangeCallback) {
+                            m_zoomChangeCallback(m_zoom);
+                        }
+                    }
+                }
+                return S_OK;
+            }
+        );
+        m_pController->add_ZoomFactorChanged(zoomHandler, &zoomToken);
 
         m_isInitialized = true;
 
@@ -455,11 +499,25 @@ void WebView2Viewer::OnWebMessageReceived(const std::wstring& message) {
         return;
     }
 
+    if (message == L"saveAsHtml") {
+        if (m_saveAsHtmlCallback) {
+            m_saveAsHtmlCallback();
+        }
+        return;
+    }
+
+    if (message == L"toggleBiDi") {
+        if (m_bidiCallback) {
+            m_bidiCallback();
+        }
+        return;
+    }
+
     const std::wstring prefixZoomChange = L"zoomChange:";
     if (message.find(prefixZoomChange) == 0) {
         std::wstring factorStr = message.substr(prefixZoomChange.length());
         float factor = static_cast<float>(_wtof(factorStr.c_str()));
-        if (factor > 0.1f && factor < 10.0f) {
+        if (factor >= 0.3f && factor <= 3.0f) {
             SetZoom(factor);
             if (m_zoomChangeCallback) {
                 m_zoomChangeCallback(factor);

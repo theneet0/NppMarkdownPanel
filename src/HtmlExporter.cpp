@@ -1095,10 +1095,18 @@ PreviewComponents HtmlExporter::GeneratePreviewComponents(
     <span class="menu-icon">🔄</span>
     <span class="menu-label" id="menu-sync-label">Toggle Caret Sync Scroll</span>
   </div>
+  <div class="menu-item" onclick="toggleBiDiFromMenu()">
+    <span class="menu-icon">🌐</span>
+    <span class="menu-label" id="menu-bidi-label">Smart BiDi (Persian/Arabic RTL)</span>
+  </div>
   <div class="menu-separator"></div>
   <div class="menu-item" onclick="copyFullHtmlFromMenu()">
     <span class="menu-icon">📋</span>
     <span class="menu-label">Copy Full Rendered HTML</span>
+  </div>
+  <div class="menu-item" onclick="saveAsHtmlFromMenu()">
+    <span class="menu-icon">💾</span>
+    <span class="menu-label">Save As HTML...</span>
   </div>
   <div class="menu-item" onclick="printFromMenu()">
     <span class="menu-icon">📄</span>
@@ -1581,10 +1589,21 @@ function toggleSyncFromMenu() {
     showToast(window._syncEnabled ? "🔄 Caret sync enabled" : "🔄 Caret sync disabled");
 }
 
+var _clientZoom = 1.0;
+function applyClientZoom(factor) {
+    _clientZoom = Math.min(3.0, Math.max(0.3, factor));
+    var container = document.getElementById("content-container");
+    if (container) {
+        container.style.zoom = _clientZoom;
+    }
+}
+
 function zoomInFromMenu() {
     closeContextMenu();
     if (window.chrome && window.chrome.webview) {
         window.chrome.webview.postMessage("zoomIn");
+    } else {
+        applyClientZoom(_clientZoom + 0.1);
     }
 }
 
@@ -1592,6 +1611,8 @@ function zoomOutFromMenu() {
     closeContextMenu();
     if (window.chrome && window.chrome.webview) {
         window.chrome.webview.postMessage("zoomOut");
+    } else {
+        applyClientZoom(_clientZoom - 0.1);
     }
 }
 
@@ -1599,6 +1620,39 @@ function zoomResetFromMenu() {
     closeContextMenu();
     if (window.chrome && window.chrome.webview) {
         window.chrome.webview.postMessage("zoomReset");
+    } else {
+        applyClientZoom(1.0);
+    }
+}
+
+function toggleBiDiFromMenu() {
+    closeContextMenu();
+    if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage("toggleBiDi");
+    } else {
+        var container = document.getElementById("content-container");
+        if (container) {
+            var isRtl = container.getAttribute("dir") === "rtl";
+            container.setAttribute("dir", isRtl ? "ltr" : "rtl");
+            showToast(isRtl ? "🌐 LTR direction set" : "🌐 RTL direction set");
+        }
+    }
+}
+
+function saveAsHtmlFromMenu() {
+    closeContextMenu();
+    if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage("saveAsHtml");
+    } else {
+        var html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+        var blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = (document.title ? document.title.replace(/[\/\\?%*:|"<>]/g, '_') : "document") + ".html";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        showToast("💾 HTML exported");
     }
 }
 
@@ -1684,6 +1738,13 @@ function showContextMenu(x, y) {
     if (tocLabel) {
         var isTocOpen = document.body.classList.contains("toc-open");
         tocLabel.innerText = isTocOpen ? "Hide Outline / TOC" : "Show Outline / TOC";
+    }
+
+    var bidiLabel = document.getElementById("menu-bidi-label");
+    if (bidiLabel) {
+        var cont = document.getElementById("content-container");
+        var isRtl = cont && cont.getAttribute("dir") === "rtl";
+        bidiLabel.innerText = isRtl ? "Smart BiDi (Switch to LTR)" : "Smart BiDi (Persian/Arabic RTL)";
     }
 
     contextMenu.style.display = "block";

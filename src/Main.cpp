@@ -16,10 +16,6 @@ void CommandSyncCaret() {
     NppMarkdownPanel::Instance().ToggleSyncWithCaret();
 }
 
-void CommandSyncFirstLine() {
-    NppMarkdownPanel::Instance().ToggleSyncWithFirstLine();
-}
-
 void CommandToggleOutline() {
     NppMarkdownPanel::Instance().ToggleOutline();
 }
@@ -89,70 +85,63 @@ __declspec(dllexport) FuncItem * getFuncsArray(int *nbF) {
     g_shortcuts[CMD_TOGGLE_PANEL]._key = 'M';
     g_funcItems[CMD_TOGGLE_PANEL]._pShKey = &g_shortcuts[CMD_TOGGLE_PANEL];
 
-    // 1: Synchronize with Caret
+    // 1: Synchronize with Editor Caret
     wcscpy_s(g_funcItems[CMD_SYNC_CARET]._itemName, L"Synchronize viewer with caret position");
     g_funcItems[CMD_SYNC_CARET]._pFunc = CommandSyncCaret;
     g_funcItems[CMD_SYNC_CARET]._cmdID = CMD_SYNC_CARET;
     g_funcItems[CMD_SYNC_CARET]._init2Check = true;
     g_funcItems[CMD_SYNC_CARET]._pShKey = nullptr;
 
-    // 2: Synchronize with First Visible Line
-    wcscpy_s(g_funcItems[CMD_SYNC_FIRST_LINE]._itemName, L"Synchronize with first visible line in editor");
-    g_funcItems[CMD_SYNC_FIRST_LINE]._pFunc = CommandSyncFirstLine;
-    g_funcItems[CMD_SYNC_FIRST_LINE]._cmdID = CMD_SYNC_FIRST_LINE;
-    g_funcItems[CMD_SYNC_FIRST_LINE]._init2Check = false;
-    g_funcItems[CMD_SYNC_FIRST_LINE]._pShKey = nullptr;
-
-    // 3: Document Outline
+    // 2: Document Outline
     wcscpy_s(g_funcItems[CMD_TOGGLE_OUTLINE]._itemName, L"Show Outline / Table of Contents");
     g_funcItems[CMD_TOGGLE_OUTLINE]._pFunc = CommandToggleOutline;
     g_funcItems[CMD_TOGGLE_OUTLINE]._cmdID = CMD_TOGGLE_OUTLINE;
     g_funcItems[CMD_TOGGLE_OUTLINE]._init2Check = false;
     g_funcItems[CMD_TOGGLE_OUTLINE]._pShKey = nullptr;
 
-    // 4: Copy HTML
+    // 3: Copy HTML
     wcscpy_s(g_funcItems[CMD_COPY_HTML]._itemName, L"Copy to clipboard (HTML)");
     g_funcItems[CMD_COPY_HTML]._pFunc = CommandCopyHtml;
     g_funcItems[CMD_COPY_HTML]._cmdID = CMD_COPY_HTML;
     g_funcItems[CMD_COPY_HTML]._init2Check = false;
     g_funcItems[CMD_COPY_HTML]._pShKey = nullptr;
 
-    // 5: Save As HTML
+    // 4: Save As HTML
     wcscpy_s(g_funcItems[CMD_SAVE_HTML]._itemName, L"Save As HTML...");
     g_funcItems[CMD_SAVE_HTML]._pFunc = CommandSaveHtml;
     g_funcItems[CMD_SAVE_HTML]._cmdID = CMD_SAVE_HTML;
     g_funcItems[CMD_SAVE_HTML]._init2Check = false;
     g_funcItems[CMD_SAVE_HTML]._pShKey = nullptr;
 
-    // 6: Zoom In
+    // 5: Zoom In
     wcscpy_s(g_funcItems[CMD_ZOOM_IN]._itemName, L"Zoom In");
     g_funcItems[CMD_ZOOM_IN]._pFunc = CommandZoomIn;
     g_funcItems[CMD_ZOOM_IN]._cmdID = CMD_ZOOM_IN;
     g_funcItems[CMD_ZOOM_IN]._init2Check = false;
     g_funcItems[CMD_ZOOM_IN]._pShKey = nullptr;
 
-    // 7: Zoom Out
+    // 6: Zoom Out
     wcscpy_s(g_funcItems[CMD_ZOOM_OUT]._itemName, L"Zoom Out");
     g_funcItems[CMD_ZOOM_OUT]._pFunc = CommandZoomOut;
     g_funcItems[CMD_ZOOM_OUT]._cmdID = CMD_ZOOM_OUT;
     g_funcItems[CMD_ZOOM_OUT]._init2Check = false;
     g_funcItems[CMD_ZOOM_OUT]._pShKey = nullptr;
 
-    // 8: Reset Zoom
+    // 7: Reset Zoom
     wcscpy_s(g_funcItems[CMD_ZOOM_RESET]._itemName, L"Reset Zoom (100%)");
     g_funcItems[CMD_ZOOM_RESET]._pFunc = CommandZoomReset;
     g_funcItems[CMD_ZOOM_RESET]._cmdID = CMD_ZOOM_RESET;
     g_funcItems[CMD_ZOOM_RESET]._init2Check = false;
     g_funcItems[CMD_ZOOM_RESET]._pShKey = nullptr;
 
-    // 9: Smart BiDi
+    // 8: Smart BiDi
     wcscpy_s(g_funcItems[CMD_TOGGLE_BIDI]._itemName, L"Smart BiDi (Persian/Arabic RTL)");
     g_funcItems[CMD_TOGGLE_BIDI]._pFunc = CommandToggleBiDi;
     g_funcItems[CMD_TOGGLE_BIDI]._cmdID = CMD_TOGGLE_BIDI;
     g_funcItems[CMD_TOGGLE_BIDI]._init2Check = true;
     g_funcItems[CMD_TOGGLE_BIDI]._pShKey = nullptr;
 
-    // 10: About
+    // 9: About
     wcscpy_s(g_funcItems[CMD_ABOUT]._itemName, L"About Markdown Panel...");
     g_funcItems[CMD_ABOUT]._pFunc = CommandAbout;
     g_funcItems[CMD_ABOUT]._cmdID = CMD_ABOUT;

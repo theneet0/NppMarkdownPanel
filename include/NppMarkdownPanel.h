@@ -18,7 +18,6 @@ public:
     // Menu Command Handlers
     void TogglePanel();
     void ToggleSyncWithCaret();
-    void ToggleSyncWithFirstLine();
     void ToggleOutline();
     void CopyRenderedHtml();
     void SaveAsHtml();
@@ -54,7 +53,6 @@ private:
     void RequestRenderDebounced();
     void ExecuteRender();
     void UpdateScrollbars();
-    void UpdateStatsUI();
     std::wstring GetCurrentBufferPath() const;
     bool IsCurrentBufferMarkdown() const;
 

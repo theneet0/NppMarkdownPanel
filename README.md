@@ -29,7 +29,9 @@
     - 📑 **Outline / Table of Contents**
     - 🌓 **Toggle Dark / Light Theme**
     - 🔄 **Toggle Caret Sync Scroll**
+    - 🌐 **Smart BiDi (RTL / LTR)**
     - 📋 **Copy Full Rendered HTML**
+    - 💾 **Save As HTML...**
     - 📄 **Print / Save as PDF**
 - 📑 **Non-Overlapping Responsive TOC Sidebar**:
   - Fixed-layout sliding Table of Contents drawer with smooth anchor navigation, active section indicators, and semi-transparent backdrop overlay.

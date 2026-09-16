@@ -294,12 +294,17 @@ void TestHtmlExporter() {
     assert(previewHtml.find("Zoom In") != std::string::npos);
     assert(previewHtml.find("Zoom Out") != std::string::npos);
     assert(previewHtml.find("Reset Zoom") != std::string::npos);
+    assert(previewHtml.find("Save As HTML") != std::string::npos);
+    assert(previewHtml.find("Smart BiDi") != std::string::npos);
     assert(previewHtml.find("zoomInFromMenu") != std::string::npos);
     assert(previewHtml.find("zoomOutFromMenu") != std::string::npos);
     assert(previewHtml.find("zoomResetFromMenu") != std::string::npos);
+    assert(previewHtml.find("saveAsHtmlFromMenu") != std::string::npos);
+    assert(previewHtml.find("toggleBiDiFromMenu") != std::string::npos);
     assert(previewHtml.find("min read") == std::string::npos);
     assert(previewHtml.find("menu-stats") == std::string::npos);
     assert(previewHtml.find("\u0645\u0637\u0627\u0644\u0639\u0647") == std::string::npos);
+    assert(previewHtml.find("\u062f\u0642\u06cc\u0642\u0647") == std::string::npos);
 
     std::cout << "  -> HtmlExporter PASS" << std::endl;
 }

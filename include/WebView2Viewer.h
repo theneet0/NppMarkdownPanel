@@ -21,6 +21,8 @@ public:
     using ZoomOutCallback = std::function<void()>;
     using ZoomResetCallback = std::function<void()>;
     using ZoomChangeCallback = std::function<void(float factor)>;
+    using SaveAsHtmlCallback = std::function<void()>;
+    using BiDiCallback = std::function<void()>;
 
     WebView2Viewer();
     ~WebView2Viewer();
@@ -56,6 +58,8 @@ public:
     void SetZoomOutCallback(ZoomOutCallback cb) { m_zoomOutCallback = cb; }
     void SetZoomResetCallback(ZoomResetCallback cb) { m_zoomResetCallback = cb; }
     void SetZoomChangeCallback(ZoomChangeCallback cb) { m_zoomChangeCallback = cb; }
+    void SetSaveAsHtmlCallback(SaveAsHtmlCallback cb) { m_saveAsHtmlCallback = cb; }
+    void SetBiDiCallback(BiDiCallback cb) { m_bidiCallback = cb; }
 
     // Actions
     void ScrollToLine(int line);
@@ -87,6 +91,8 @@ private:
     ZoomOutCallback m_zoomOutCallback;
     ZoomResetCallback m_zoomResetCallback;
     ZoomChangeCallback m_zoomChangeCallback;
+    SaveAsHtmlCallback m_saveAsHtmlCallback;
+    BiDiCallback m_bidiCallback;
 
     // Internal initialization completion
     void OnEnvironmentCreated(HRESULT result, ICoreWebView2Environment* env);

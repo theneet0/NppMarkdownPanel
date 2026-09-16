@@ -63,8 +63,6 @@ void NppMarkdownPanel::OnNppReady() {
     // Synchronize initial menu check states using allocated command IDs
     int cmdCaret = GetPluginCmdId(CMD_SYNC_CARET);
     if (cmdCaret > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdCaret, (LPARAM)(m_config.syncWithCaret ? TRUE : FALSE));
-    int cmdFirst = GetPluginCmdId(CMD_SYNC_FIRST_LINE);
-    if (cmdFirst > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdFirst, (LPARAM)(m_config.syncWithFirstLine ? TRUE : FALSE));
     int cmdOutline = GetPluginCmdId(CMD_TOGGLE_OUTLINE);
     if (cmdOutline > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdOutline, (LPARAM)(m_config.showOutline ? TRUE : FALSE));
     int cmdBiDi = GetPluginCmdId(CMD_TOGGLE_BIDI);
@@ -187,6 +185,12 @@ bool NppMarkdownPanel::CreatePanelWindow() {
                 SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdOutline, (LPARAM)(isOpen ? TRUE : FALSE));
             }
         });
+        m_webViewViewer.SetSaveAsHtmlCallback([this]() {
+            SaveAsHtml();
+        });
+        m_webViewViewer.SetBiDiCallback([this]() {
+            ToggleBiDi();
+        });
         m_webViewViewer.SetZoomInCallback([this]() {
             ZoomIn();
         });
@@ -198,9 +202,8 @@ bool NppMarkdownPanel::CreatePanelWindow() {
         });
         m_webViewViewer.SetZoomChangeCallback([this](float factor) {
             m_config.zoomLevel = factor;
-            if (m_config.zoomLevel < 0.2f) m_config.zoomLevel = 0.2f;
+            if (m_config.zoomLevel < 0.3f) m_config.zoomLevel = 0.3f;
             if (m_config.zoomLevel > 3.0f) m_config.zoomLevel = 3.0f;
-            m_webViewViewer.SetZoom(m_config.zoomLevel);
             m_renderer.SetZoom(m_config.zoomLevel);
         });
         NppLog("Modern WebView2 engine initialized successfully");
@@ -302,23 +305,12 @@ void NppMarkdownPanel::TogglePanel() {
 
 void NppMarkdownPanel::ToggleSyncWithCaret() {
     m_config.syncWithCaret = !m_config.syncWithCaret;
-    if (m_config.syncWithCaret) m_config.syncWithFirstLine = false;
+    m_config.syncWithFirstLine = false;
     int cmdCaret = GetPluginCmdId(CMD_SYNC_CARET);
-    int cmdFirst = GetPluginCmdId(CMD_SYNC_FIRST_LINE);
     if (cmdCaret > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdCaret, (LPARAM)(m_config.syncWithCaret ? TRUE : FALSE));
-    if (cmdFirst > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdFirst, FALSE);
     if (m_hPanel) {
         SendMessage(GetDlgItem(m_hPanel, IDC_BTN_SYNC_TOGGLE), BM_SETCHECK, m_config.syncWithCaret ? BST_CHECKED : BST_UNCHECKED, 0);
     }
-}
-
-void NppMarkdownPanel::ToggleSyncWithFirstLine() {
-    m_config.syncWithFirstLine = !m_config.syncWithFirstLine;
-    if (m_config.syncWithFirstLine) m_config.syncWithCaret = false;
-    int cmdFirst = GetPluginCmdId(CMD_SYNC_FIRST_LINE);
-    int cmdCaret = GetPluginCmdId(CMD_SYNC_CARET);
-    if (cmdFirst > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdFirst, (LPARAM)(m_config.syncWithFirstLine ? TRUE : FALSE));
-    if (cmdCaret > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdCaret, FALSE);
 }
 
 void NppMarkdownPanel::ToggleOutline() {
