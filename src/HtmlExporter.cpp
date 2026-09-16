@@ -95,7 +95,7 @@ body {
     padding: 0;
     background-color: var(--bg-page);
     color: var(--text-primary);
-    font-family: -apple-system, BlinkMacSystemFont, "Vazirmatn", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Vazirmatn", "Segoe UI", Tahoma, "Noto Sans Arabic", system-ui, sans-serif;
     font-size: 15px;
     line-height: 1.68;
     transition: background-color 0.25s ease, color 0.25s ease;
@@ -344,6 +344,8 @@ blockquote[dir="rtl"] {
     border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    direction: ltr !important;
+    text-align: left !important;
 }
 
 .code-block-header {
@@ -354,6 +356,7 @@ blockquote[dir="rtl"] {
     background: var(--code-header-bg);
     border-bottom: 1px solid var(--code-border);
     user-select: none;
+    direction: ltr !important;
 }
 
 .mac-controls {
@@ -374,7 +377,7 @@ blockquote[dir="rtl"] {
 
 .lang-badge {
     font-size: 11px;
-    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-family: "Cascadia Code", "Cascadia Mono", Consolas, "Courier New", monospace;
     font-weight: 600;
     color: var(--text-secondary);
     text-transform: uppercase;
@@ -407,21 +410,15 @@ blockquote[dir="rtl"] {
 
 pre {
     margin: 0;
-    padding: 14px 16px;
+    padding: 14px 18px;
     overflow-x: auto;
-    font-family: ui-monospace, "Cascadia Code", "Fira Code", Consolas, monospace;
+    font-family: "Cascadia Code", "Cascadia Mono", Consolas, "Courier New", monospace;
     font-size: 13.5px;
     line-height: 1.55;
     tab-size: 4;
-}
-
-code {
-    font-family: ui-monospace, "Cascadia Code", "Fira Code", Consolas, monospace;
-    font-size: 85%;
-    padding: 0.2em 0.45em;
-    background-color: var(--code-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
+    direction: ltr !important;
+    text-align: left !important;
+    unicode-bidi: isolate;
 }
 
 pre code {
@@ -429,6 +426,50 @@ pre code {
     border: none;
     padding: 0;
     font-size: 100%;
+    display: block;
+    direction: ltr !important;
+    text-align: left !important;
+    unicode-bidi: isolate;
+}
+
+code.inline-code, code {
+    font-family: "Cascadia Code", "Cascadia Mono", Consolas, "Courier New", monospace;
+    font-size: 88%;
+    padding: 0.15em 0.45em;
+    background-color: var(--code-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    direction: ltr;
+    unicode-bidi: isolate;
+    display: inline;
+    white-space: break-spaces;
+    word-break: break-word;
+}
+
+code[dir="rtl"], code.inline-code[dir="rtl"] {
+    direction: rtl;
+    unicode-bidi: isolate;
+    text-align: right;
+}
+
+code[dir="ltr"], code.inline-code[dir="ltr"] {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: left;
+}
+
+bdi {
+    unicode-bidi: isolate;
+}
+
+bdi[dir="ltr"] {
+    direction: ltr;
+    text-align: left;
+}
+
+bdi[dir="rtl"] {
+    direction: rtl;
+    text-align: right;
 }
 
 /* Syntax Highlighting Tokens */
@@ -544,9 +585,47 @@ body.dark mark {
     color: #e6edf3;
 }
 
-.math-inline {
-    font-family: KaTeX_Main, "Times New Roman", serif;
-    padding: 0 3px;
+/* Math and Diagrams (100% Offline) */
+.katex-math, .katex, .katex-display {
+    font-family: "Cambria Math", "Latin Modern Math", "STIX Two Math", "Times New Roman", serif;
+    font-size: 1.15em;
+    direction: ltr !important;
+    text-align: center;
+    margin: 14px 0;
+    overflow-x: auto;
+    unicode-bidi: isolate;
+}
+
+.katex-inline {
+    display: inline;
+    font-family: "Cambria Math", "Latin Modern Math", "STIX Two Math", "Times New Roman", serif;
+    font-size: 1.05em;
+    direction: ltr !important;
+    unicode-bidi: isolate;
+}
+
+math {
+    direction: ltr !important;
+    unicode-bidi: isolate;
+}
+
+.mermaid {
+    margin: 20px 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: var(--code-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 16px;
+    overflow-x: auto;
+    direction: ltr !important;
+}
+
+.mermaid-svg {
+    max-width: 100%;
+    height: auto;
+    display: block;
 }
 
 @media print {
@@ -556,10 +635,45 @@ body.dark mark {
 }
 )CSS";
 
+} // namespace
+
+std::wstring HtmlExporter::EscapeHtml(const std::wstring& str) {
+    std::wstringstream ss;
+    for (wchar_t ch : str) {
+        switch (ch) {
+            case L'&': ss << L"&amp;"; break;
+            case L'<': ss << L"&lt;"; break;
+            case L'>': ss << L"&gt;"; break;
+            case L'\"': ss << L"&quot;"; break;
+            case L'\'': ss << L"&#39;"; break;
+            default: ss << ch; break;
+        }
+    }
+    return ss.str();
+}
+
+std::string HtmlExporter::EscapeHtmlUtf8(const std::string& str) {
+    std::stringstream ss;
+    for (char ch : str) {
+        switch (ch) {
+            case '&': ss << "&amp;"; break;
+            case '<': ss << "&lt;"; break;
+            case '>': ss << "&gt;"; break;
+            case '\"': ss << "&quot;"; break;
+            case '\'': ss << "&#39;"; break;
+            default: ss << ch; break;
+        }
+    }
+    return ss.str();
+}
+
+namespace {
+
 std::wstring TokenizeCodeHtml(const std::wstring& line, const std::wstring& language) {
+    if (line.empty()) return L"";
     auto tokens = SyntaxHighlighter::Tokenize(line, language);
     if (tokens.empty()) {
-        return HtmlExporter::ExportToHtml(MarkdownDocument{}, line, false); // Just escape
+        return HtmlExporter::EscapeHtml(line);
     }
 
     std::wstringstream ss;
@@ -567,13 +681,7 @@ std::wstring TokenizeCodeHtml(const std::wstring& line, const std::wstring& lang
     for (const auto& tok : tokens) {
         if (tok.start > cursor) {
             std::wstring plain = line.substr(cursor, tok.start - cursor);
-            for (wchar_t ch : plain) {
-                if (ch == L'&') ss << L"&amp;";
-                else if (ch == L'<') ss << L"&lt;";
-                else if (ch == L'>') ss << L"&gt;";
-                else if (ch == L'\"') ss << L"&quot;";
-                else ss << ch;
-            }
+            ss << HtmlExporter::EscapeHtml(plain);
         }
 
         std::wstring tokenText = line.substr(tok.start, tok.length);
@@ -589,27 +697,13 @@ std::wstring TokenizeCodeHtml(const std::wstring& line, const std::wstring& lang
             default: break;
         }
 
-        ss << L"<span class=\"" << clsName << L"\">";
-        for (wchar_t ch : tokenText) {
-            if (ch == L'&') ss << L"&amp;";
-            else if (ch == L'<') ss << L"&lt;";
-            else if (ch == L'>') ss << L"&gt;";
-            else if (ch == L'\"') ss << L"&quot;";
-            else ss << ch;
-        }
-        ss << L"</span>";
+        ss << L"<span class=\"" << clsName << L"\">" << HtmlExporter::EscapeHtml(tokenText) << L"</span>";
         cursor = tok.start + tok.length;
     }
 
     if (cursor < line.size()) {
         std::wstring plain = line.substr(cursor);
-        for (wchar_t ch : plain) {
-            if (ch == L'&') ss << L"&amp;";
-            else if (ch == L'<') ss << L"&lt;";
-            else if (ch == L'>') ss << L"&gt;";
-            else if (ch == L'\"') ss << L"&quot;";
-            else ss << ch;
-        }
+        ss << HtmlExporter::EscapeHtml(plain);
     }
 
     return ss.str();
@@ -617,7 +711,7 @@ std::wstring TokenizeCodeHtml(const std::wstring& line, const std::wstring& lang
 
 } // namespace
 
-std::string HtmlExporter::GeneratePreviewHtml(
+PreviewComponents HtmlExporter::GeneratePreviewComponents(
     const MarkdownDocument& doc,
     const std::wstring& title,
     bool isDarkMode,
@@ -807,26 +901,17 @@ std::string HtmlExporter::GeneratePreviewHtml(
                     BiDiEngine::ToPersianDigits(estMinutes) + L" \u062F\u0642\u06CC\u0642\u0647 \u0645\u0637\u0627\u0644\u0639\u0647";
     }
 
+    std::string bodyHtmlUtf8 = WideToUtf8(bodyStream.str());
+    std::string tocHtmlUtf8 = WideToUtf8(tocStream.str());
+    std::string statsTextUtf8 = WideToUtf8(statsText);
+
     std::stringstream html;
     html << "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n";
     html << "<meta charset=\"UTF-8\">\n";
     html << "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n";
     html << "<title>" << WideToUtf8(title) << "</title>\n";
 
-    // Google Fonts for Vazirmatn and modern typography
-    html << "<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n";
-    html << "<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n";
-    html << "<link href=\"https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&family=Cascadia+Code:wght@400;600&display=swap\" rel=\"stylesheet\">\n";
-
-    // KaTeX CDN
-    html << "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css\" crossorigin=\"anonymous\">\n";
-    html << "<script defer src=\"https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js\" crossorigin=\"anonymous\"></script>\n";
-    html << "<script defer src=\"https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js\" crossorigin=\"anonymous\"></script>\n";
-
-    // Mermaid.js CDN
-    html << "<script src=\"https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js\"></script>\n";
-
-    // Embedded CSS
+    // 100% Local Offline Styles (zero external CDN or web font latency)
     html << "<style>\n" << s_modernPreviewCss << "\n</style>\n";
     html << "</head>\n<body class=\"" << (isDarkMode ? "dark" : "") << "\">\n";
 
@@ -849,7 +934,7 @@ std::string HtmlExporter::GeneratePreviewHtml(
   <button class="tool-btn" id="btn-print" title="Print or Export to PDF" onclick="window.print()">📄</button>
   <div class="tool-sep"></div>
   <div class="stats-pill">)HTML";
-    html << WideToUtf8(statsText);
+    html << statsTextUtf8;
     html << R"HTML(</div>
 </div>
 
@@ -859,30 +944,318 @@ std::string HtmlExporter::GeneratePreviewHtml(
     <button class="toc-close" onclick="toggleToc()">✕</button>
   </div>
   <div class="toc-content">)HTML";
-    html << WideToUtf8(tocStream.str());
+    html << tocHtmlUtf8;
     html << R"HTML(  </div>
 </div>
 
 <div id="content-container">)HTML";
-    html << WideToUtf8(bodyStream.str());
+    html << bodyHtmlUtf8;
     html << R"HTML(</div>
 
 <script>
-// KaTeX and Mermaid initialization
-document.addEventListener("DOMContentLoaded", function() {
-    if (typeof renderMathInElement !== 'undefined') {
-        renderMathInElement(document.getElementById("content-container"), {
-            delimiters: [
-                {left: "$$", right: "$$", display: true},
-                {left: "$", right: "$", display: false}
-            ],
-            throwOnError: false
+// Native 100% offline MathML engine (KaTeX compatible)
+function renderLocalMath() {
+    var container = document.getElementById("content-container");
+    if (!container) return;
+
+    var mathSymbols = {
+        "alpha": "α", "beta": "β", "gamma": "γ", "delta": "δ", "epsilon": "ε",
+        "zeta": "ζ", "eta": "η", "theta": "θ", "iota": "ι", "kappa": "κ",
+        "lambda": "λ", "mu": "μ", "nu": "ν", "xi": "ξ", "pi": "π", "rho": "ρ",
+        "sigma": "σ", "tau": "τ", "upsilon": "υ", "phi": "φ", "chi": "χ",
+        "psi": "ψ", "omega": "ω", "Gamma": "Γ", "Delta": "Δ", "Theta": "Θ",
+        "Lambda": "Λ", "Xi": "Ξ", "Pi": "Π", "Sigma": "Σ", "Phi": "Φ", "Psi": "Ψ",
+        "Omega": "Ω", "infty": "∞", "pm": "±", "times": "×", "div": "÷",
+        "cdot": "·", "approx": "≈", "neq": "≠", "ne": "≠", "le": "≤", "leq": "≤",
+        "ge": "≥", "geq": "≥", "in": "∈", "notin": "∉", "partial": "∂",
+        "sum": "∑", "prod": "∏", "int": "∫", "oint": "∮", "to": "→", "rightarrow": "→",
+        "leftarrow": "←", "Rightarrow": "⇒", "Leftarrow": "⇐", "forall": "∀", "exists": "∃"
+    };
+
+    function texToMathML(tex, isBlock) {
+        var str = tex.trim();
+        var fracRegex = /\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g;
+        while (fracRegex.test(str)) {
+            str = str.replace(fracRegex, function(_, a, b) {
+                return '<mfrac><mrow>' + convertTokens(a) + '</mrow><mrow>' + convertTokens(b) + '</mrow></mfrac>';
+            });
+        }
+        var sqrtRegex = /\\sqrt\s*\{([^{}]+)\}/g;
+        while (sqrtRegex.test(str)) {
+            str = str.replace(sqrtRegex, function(_, a) {
+                return '<msqrt><mrow>' + convertTokens(a) + '</mrow></msqrt>';
+            });
+        }
+        return '<math display="' + (isBlock ? 'block' : 'inline') + '" class="katex-math katex">' + convertTokens(str) + '</math>';
+    }
+
+    function convertTokens(expr) {
+        expr = expr.replace(/([a-zA-Z0-9\u0370-\u03FF]+|\))\s*\^\s*\{([^{}]+)\}/g, function(_, base, sup) {
+            return '<msup><mrow>' + tokenChunk(base) + '</mrow><mrow>' + convertTokens(sup) + '</mrow></msup>';
         });
+        expr = expr.replace(/([a-zA-Z0-9\u0370-\u03FF]+|\))\s*\^\s*([a-zA-Z0-9])/g, function(_, base, sup) {
+            return '<msup><mrow>' + tokenChunk(base) + '</mrow><mrow>' + tokenChunk(sup) + '</mrow></msup>';
+        });
+        expr = expr.replace(/([a-zA-Z0-9\u0370-\u03FF]+|\))\s*_\s*\{([^{}]+)\}/g, function(_, base, sub) {
+            return '<msub><mrow>' + tokenChunk(base) + '</mrow><mrow>' + convertTokens(sub) + '</mrow></msub>';
+        });
+        expr = expr.replace(/([a-zA-Z0-9\u0370-\u03FF]+|\))\s*_\s*([a-zA-Z0-9])/g, function(_, base, sub) {
+            return '<msub><mrow>' + tokenChunk(base) + '</mrow><mrow>' + tokenChunk(sub) + '</mrow></msub>';
+        });
+        return tokenChunk(expr);
     }
-    if (typeof mermaid !== 'undefined') {
-        mermaid.initialize({ startOnLoad: true, theme: document.body.classList.contains('dark') ? 'dark' : 'default' });
+
+    function tokenChunk(s) {
+        return s.replace(/\\([a-zA-Z]+)/g, function(match, name) {
+            if (mathSymbols[name]) {
+                var sym = mathSymbols[name];
+                if ("∑∏∫∮".indexOf(sym) !== -1) {
+                    return '<mo largeop="true">' + sym + '</mo>';
+                } else if ("±×÷·≈≠≤≥∈∉→←⇒⇐∀∃".indexOf(sym) !== -1) {
+                    return '<mo>' + sym + '</mo>';
+                }
+                return '<mi>' + sym + '</mi>';
+            }
+            return '<mi>' + match + '</mi>';
+        }).replace(/([0-9]+(?:\.[0-9]+)?)/g, '<mn>$1</mn>')
+          .replace(/([=+\-*\/<>(),!])/g, '<mo>$1</mo>')
+          .replace(/(?![^<]*>)([a-zA-Z])/g, '<mi>$1</mi>');
     }
-});
+
+    var walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+    var textNodes = [];
+    while (walker.nextNode()) {
+        var node = walker.currentNode;
+        if (node.parentElement && (node.parentElement.tagName === "PRE" || node.parentElement.tagName === "CODE" || node.parentElement.tagName === "SCRIPT" || node.parentElement.tagName === "STYLE" || node.parentElement.closest("pre, code, .katex"))) continue;
+        if (node.nodeValue.indexOf("$") !== -1) {
+            textNodes.push(node);
+        }
+    }
+
+    textNodes.forEach(function(node) {
+        var text = node.nodeValue;
+        if (text.indexOf("$$") !== -1) {
+            var parts = text.split("$$");
+            if (parts.length >= 3) {
+                var frag = document.createDocumentFragment();
+                for (var i = 0; i < parts.length; i++) {
+                    if (i % 2 === 1) {
+                        var span = document.createElement("div");
+                        span.className = "katex-display katex";
+                        span.innerHTML = texToMathML(parts[i], true);
+                        frag.appendChild(span);
+                    } else if (parts[i].length > 0) {
+                        frag.appendChild(document.createTextNode(parts[i]));
+                    }
+                }
+                node.parentNode.replaceChild(frag, node);
+                return;
+            }
+        }
+        if (text.indexOf("$") !== -1) {
+            var parts = text.split("$");
+            if (parts.length >= 3) {
+                var frag = document.createDocumentFragment();
+                for (var i = 0; i < parts.length; i++) {
+                    if (i % 2 === 1) {
+                        var span = document.createElement("span");
+                        span.className = "katex-inline katex";
+                        span.innerHTML = texToMathML(parts[i], false);
+                        frag.appendChild(span);
+                    } else if (parts[i].length > 0) {
+                        frag.appendChild(document.createTextNode(parts[i]));
+                    }
+                }
+                node.parentNode.replaceChild(frag, node);
+            }
+        }
+    });
+}
+
+// Native 100% offline Mermaid procedural SVG diagram engine
+function renderLocalMermaid() {
+    var blocks = document.querySelectorAll(".mermaid");
+    if (!blocks || blocks.length === 0) return;
+
+    var isDark = document.body.classList.contains("dark");
+    var strokeColor = isDark ? "#58a6ff" : "#0969da";
+    var nodeBg = isDark ? "#161b22" : "#ffffff";
+    var nodeBorder = isDark ? "#30363d" : "#d0d7de";
+    var textColor = isDark ? "#e6edf3" : "#1f2328";
+    var edgeColor = isDark ? "#8b949e" : "#57606a";
+    var labelBg = isDark ? "#21262d" : "#f6f8fa";
+
+    blocks.forEach(function(block) {
+        if (block.querySelector("svg")) return;
+        var code = block.textContent.trim();
+        var lines = code.split("\n").map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
+        if (lines.length === 0) return;
+
+        var firstLine = lines[0].toLowerCase();
+        var isLR = firstLine.indexOf("lr") !== -1;
+        var nodes = {};
+        var edges = [];
+
+        function addNode(id, label) {
+            if (!nodes[id]) {
+                nodes[id] = { id: id, label: label || id, inEdges: 0, outEdges: [] };
+            } else if (label && nodes[id].label === id) {
+                nodes[id].label = label;
+            }
+            return nodes[id];
+        }
+
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+            if (line.indexOf("graph") === 0 || line.indexOf("flowchart") === 0) continue;
+
+            var edgeMatch = line.match(/^([a-zA-Z0-9_]+)(?:\[(.*?)\])?\s*(?:-->|---\s*\|(.*?)\|\s*-->|-->\|(.*?)\||\-\-\>)\s*([a-zA-Z0-9_]+)(?:\[(.*?)\])?$/);
+            if (edgeMatch) {
+                var uId = edgeMatch[1];
+                var uText = edgeMatch[2] || uId;
+                var edgeLabel = edgeMatch[3] || edgeMatch[4] || "";
+                var vId = edgeMatch[5];
+                var vText = edgeMatch[6] || vId;
+
+                addNode(uId, uText);
+                addNode(vId, vText);
+                nodes[uId].outEdges.push({ to: vId, label: edgeLabel });
+                nodes[vId].inEdges++;
+                edges.push({ from: uId, to: vId, label: edgeLabel });
+            } else {
+                var single = line.match(/^([a-zA-Z0-9_]+)\[(.*?)\]$/);
+                if (single) {
+                    addNode(single[1], single[2]);
+                }
+            }
+        }
+
+        var nodeKeys = Object.keys(nodes);
+        if (nodeKeys.length === 0) return;
+
+        var layers = {};
+        var maxLayer = 0;
+        nodeKeys.forEach(function(k) {
+            if (nodes[k].inEdges === 0) {
+                layers[k] = 0;
+            }
+        });
+        if (Object.keys(layers).length === 0) {
+            layers[nodeKeys[0]] = 0;
+        }
+
+        var queue = Object.keys(layers);
+        while (queue.length > 0) {
+            var cur = queue.shift();
+            var curL = layers[cur];
+            nodes[cur].outEdges.forEach(function(e) {
+                var nxt = e.to;
+                if (layers[nxt] === undefined || layers[nxt] < curL + 1) {
+                    layers[nxt] = curL + 1;
+                    if (layers[nxt] > maxLayer) maxLayer = layers[nxt];
+                    queue.push(nxt);
+                }
+            });
+        }
+        nodeKeys.forEach(function(k) {
+            if (layers[k] === undefined) layers[k] = 0;
+        });
+
+        var layerGroups = [];
+        for (var l = 0; l <= maxLayer; l++) layerGroups.push([]);
+        nodeKeys.forEach(function(k) {
+            layerGroups[layers[k]].push(k);
+        });
+
+        var nodeWidth = 130;
+        var nodeHeight = 44;
+        var nodePos = {};
+        var svgW = 0, svgH = 0;
+
+        if (isLR) {
+            var colGap = 100;
+            var rowGap = 36;
+            var maxRows = 1;
+            layerGroups.forEach(function(g) { if (g.length > maxRows) maxRows = g.length; });
+            svgW = (maxLayer + 1) * (nodeWidth + colGap) + 40;
+            svgH = maxRows * (nodeHeight + rowGap) + 40;
+
+            layerGroups.forEach(function(g, colIdx) {
+                var totalColH = g.length * nodeHeight + (g.length - 1) * rowGap;
+                var startY = (svgH - totalColH) / 2;
+                var x = 30 + colIdx * (nodeWidth + colGap);
+                g.forEach(function(k, rowIdx) {
+                    var y = startY + rowIdx * (nodeHeight + rowGap);
+                    nodePos[k] = { x: x, y: y };
+                });
+            });
+        } else {
+            var colGap = 40;
+            var rowGap = 70;
+            var maxCols = 1;
+            layerGroups.forEach(function(g) { if (g.length > maxCols) maxCols = g.length; });
+            svgW = maxCols * (nodeWidth + colGap) + 40;
+            svgH = (maxLayer + 1) * (nodeHeight + rowGap) + 40;
+
+            layerGroups.forEach(function(g, rowIdx) {
+                var totalRowW = g.length * nodeWidth + (g.length - 1) * colGap;
+                var startX = (svgW - totalRowW) / 2;
+                var y = 30 + rowIdx * (nodeHeight + rowGap);
+                g.forEach(function(k, colIdx) {
+                    var x = startX + colIdx * (nodeWidth + colGap);
+                    nodePos[k] = { x: x, y: y };
+                });
+            });
+        }
+
+        var svgParts = [];
+        svgParts.push('<svg class="mermaid-svg" viewBox="0 0 ' + svgW + ' ' + svgH + '" width="' + svgW + '" height="' + svgH + '">');
+        svgParts.push('<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="' + strokeColor + '" /></marker></defs>');
+
+        edges.forEach(function(e) {
+            var p1 = nodePos[e.from];
+            var p2 = nodePos[e.to];
+            if (!p1 || !p2) return;
+
+            var x1, y1, x2, y2;
+            if (isLR) {
+                x1 = p1.x + nodeWidth;
+                y1 = p1.y + nodeHeight / 2;
+                x2 = p2.x;
+                y2 = p2.y + nodeHeight / 2;
+            } else {
+                x1 = p1.x + nodeWidth / 2;
+                y1 = p1.y + nodeHeight;
+                x2 = p2.x + nodeWidth / 2;
+                y2 = p2.y;
+            }
+
+            var midX = (x1 + x2) / 2;
+            var midY = (y1 + y2) / 2;
+            var d = isLR
+                ? 'M ' + x1 + ' ' + y1 + ' C ' + (x1 + 40) + ' ' + y1 + ', ' + (x2 - 40) + ' ' + y2 + ', ' + x2 + ' ' + y2
+                : 'M ' + x1 + ' ' + y1 + ' C ' + x1 + ' ' + (y1 + 35) + ', ' + x2 + ' ' + (y2 - 35) + ', ' + x2 + ' ' + y2;
+
+            svgParts.push('<path d="' + d + '" stroke="' + edgeColor + '" stroke-width="2" fill="none" marker-end="url(#arrow)" />');
+            if (e.label) {
+                var lblW = e.label.length * 8 + 12;
+                svgParts.push('<rect x="' + (midX - lblW/2) + '" y="' + (midY - 10) + '" width="' + lblW + '" height="18" rx="4" fill="' + labelBg + '" stroke="' + nodeBorder + '" stroke-width="1" />');
+                svgParts.push('<text x="' + midX + '" y="' + (midY + 3) + '" text-anchor="middle" font-size="11" fill="' + textColor + '" font-family="system-ui, sans-serif">' + e.label + '</text>');
+            }
+        });
+
+        nodeKeys.forEach(function(k) {
+            var pos = nodePos[k];
+            var node = nodes[k];
+            svgParts.push('<rect x="' + pos.x + '" y="' + pos.y + '" width="' + nodeWidth + '" height="' + nodeHeight + '" rx="8" fill="' + nodeBg + '" stroke="' + strokeColor + '" stroke-width="2" />');
+            svgParts.push('<text x="' + (pos.x + nodeWidth / 2) + '" y="' + (pos.y + nodeHeight / 2 + 5) + '" text-anchor="middle" font-size="13" font-weight="600" fill="' + textColor + '" font-family="system-ui, sans-serif">' + node.label + '</text>');
+        });
+
+        svgParts.push('</svg>');
+        block.innerHTML = svgParts.join('');
+    });
+}
+window.mermaid = { initialize: function() { renderLocalMermaid(); } };
 
 // Checkbox two-way sync to Notepad++ Scintilla
 function handleTaskCheck(cb) {
@@ -896,9 +1269,10 @@ function handleTaskCheck(cb) {
 function copyCodeBlock(btn) {
     var card = btn.closest(".code-block-card");
     if (!card) return;
-    var pre = card.querySelector("pre");
-    if (!pre) return;
-    navigator.clipboard.writeText(pre.innerText).then(function() {
+    var code = card.querySelector("pre code");
+    if (!code) code = card.querySelector("pre");
+    if (!code) return;
+    navigator.clipboard.writeText(code.innerText).then(function() {
         var oldText = btn.innerHTML;
         btn.innerHTML = "✓ Copied!";
         btn.classList.add("copied");
@@ -922,10 +1296,12 @@ function copyFullHtml() {
 // Theme toggle
 function toggleTheme() {
     document.body.classList.toggle("dark");
-    if (typeof mermaid !== 'undefined') {
-        mermaid.initialize({ theme: document.body.classList.contains('dark') ? 'dark' : 'default' });
-    }
+    renderLocalMermaid();
 }
+
+window.onThemeChanged = function() {
+    renderLocalMermaid();
+};
 
 // TOC Drawer toggle
 function toggleToc() {
@@ -937,7 +1313,6 @@ function toggleToc() {
 window.scrollToSourceLine = function(targetLine) {
     var el = document.querySelector('[data-source-line="' + targetLine + '"]');
     if (!el) {
-        // Find closest
         var all = document.querySelectorAll('[data-source-line]');
         var minDiff = 999999;
         for (var i = 0; i < all.length; i++) {
@@ -1057,7 +1432,6 @@ function onSearchKey(e) {
     }
 }
 
-// Global shortcut Ctrl+F
 document.addEventListener("keydown", function(e) {
     if ((e.ctrlKey || e.metaKey) && e.key === "f") {
         e.preventDefault();
@@ -1070,12 +1444,60 @@ document.addEventListener("keydown", function(e) {
         input.select();
     }
 });
+
+// Initialization & WebView2 Host Communication
+document.addEventListener("DOMContentLoaded", function() {
+    renderLocalMath();
+    renderLocalMermaid();
+    if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage("pageLoaded");
+    }
+});
+
+if (window.chrome && window.chrome.webview) {
+    window.chrome.webview.addEventListener("message", function(event) {
+        var data = event.data;
+        if (typeof data === "string") {
+            try { data = JSON.parse(data); } catch(e) {}
+        }
+        if (data && data.type === "updateContent") {
+            var content = document.getElementById("content-container");
+            if (content && typeof data.body === "string") {
+                content.innerHTML = data.body;
+            }
+            var toc = document.querySelector("#toc-drawer .toc-content");
+            if (toc && typeof data.toc === "string") {
+                toc.innerHTML = data.toc;
+            }
+            var stats = document.querySelector(".stats-pill");
+            if (stats && typeof data.stats === "string") {
+                stats.innerText = data.stats;
+            }
+            renderLocalMath();
+            renderLocalMermaid();
+            if (typeof doSearch === "function") {
+                var searchInput = document.getElementById("search-input");
+                if (searchInput && searchInput.value) doSearch();
+            }
+        }
+    });
+}
 </script>
 </body>
 </html>
 )HTML";
 
-    return html.str();
+    return PreviewComponents{ html.str(), bodyHtmlUtf8, tocHtmlUtf8, statsTextUtf8 };
+}
+
+std::string HtmlExporter::GeneratePreviewHtml(
+    const MarkdownDocument& doc,
+    const std::wstring& title,
+    bool isDarkMode,
+    float zoomLevel,
+    bool isSyncEnabled
+) {
+    return GeneratePreviewComponents(doc, title, isDarkMode, zoomLevel, isSyncEnabled).fullHtml;
 }
 
 std::wstring HtmlExporter::ExportToHtml(const MarkdownDocument& doc, const std::wstring& title, bool isDarkMode) {
@@ -1141,36 +1563,6 @@ std::string HtmlExporter::GenerateCfHtml(const std::string& htmlFragment) {
     return std::string(buf) + startHtml + htmlFragment + endHtml;
 }
 
-std::wstring HtmlExporter::EscapeHtml(const std::wstring& str) {
-    std::wstringstream ss;
-    for (wchar_t ch : str) {
-        switch (ch) {
-            case L'&': ss << L"&amp;"; break;
-            case L'<': ss << L"&lt;"; break;
-            case L'>': ss << L"&gt;"; break;
-            case L'\"': ss << L"&quot;"; break;
-            case L'\'': ss << L"&#39;"; break;
-            default: ss << ch; break;
-        }
-    }
-    return ss.str();
-}
-
-std::string HtmlExporter::EscapeHtmlUtf8(const std::string& str) {
-    std::stringstream ss;
-    for (char ch : str) {
-        switch (ch) {
-            case '&': ss << "&amp;"; break;
-            case '<': ss << "&lt;"; break;
-            case '>': ss << "&gt;"; break;
-            case '\"': ss << "&quot;"; break;
-            case '\'': ss << "&#39;"; break;
-            default: ss << ch; break;
-        }
-    }
-    return ss.str();
-}
-
 std::wstring HtmlExporter::InlinesToHtml(const std::vector<MarkdownSpan>& inlines) {
     std::wstringstream ss;
     for (const auto& span : inlines) {
@@ -1190,11 +1582,16 @@ std::wstring HtmlExporter::InlinesToHtml(const std::vector<MarkdownSpan>& inline
             case InlineStyleType::Highlight:
                 ss << L"<mark>" << EscapeHtml(span.text) << L"</mark>";
                 break;
-            case InlineStyleType::InlineCode:
-                ss << L"<code>" << EscapeHtml(span.text) << L"</code>";
+            case InlineStyleType::InlineCode: {
+                bool isCodeRtl = BiDiEngine::IsParagraphRTL(span.text);
+                const wchar_t* cDir = isCodeRtl ? L"rtl" : L"ltr";
+                ss << L"<code class=\"inline-code\" dir=\"" << cDir << L"\"><bdi dir=\"" << cDir << L"\">"
+                   << EscapeHtml(span.text) << L"</bdi></code>";
                 break;
+            }
             case InlineStyleType::InlineMath:
-                ss << L"$" << EscapeHtml(span.text) << L"$";
+                ss << L"<span class=\"katex-inline katex\" dir=\"ltr\"><bdi dir=\"ltr\">$"
+                   << EscapeHtml(span.text) << L"$</bdi></span>";
                 break;
             case InlineStyleType::Link:
                 ss << L"<a href=\"" << EscapeHtml(span.extra) << L"\">" << EscapeHtml(span.text) << L"</a>";

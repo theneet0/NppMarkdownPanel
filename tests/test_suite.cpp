@@ -177,13 +177,47 @@ void TestSyntaxHighlighter() {
     assert(foundNumber);
     assert(foundComment);
 
+    // Bash / shell tokens
+    std::wstring shCode = L"sudo chmod 0755 /usr/local/bin/gost # Make executable";
+    auto shTokens = SyntaxHighlighter::Tokenize(shCode, L"bash");
+    assert(!shTokens.empty());
+    bool foundShKw = false, foundShNum = false, foundShComment = false;
+    for (const auto& t : shTokens) {
+        if (t.type == HighlightTokenType::Keyword) foundShKw = true;
+        if (t.type == HighlightTokenType::Number) foundShNum = true;
+        if (t.type == HighlightTokenType::Comment) foundShComment = true;
+    }
+    assert(foundShKw);
+    assert(foundShNum);
+    assert(foundShComment);
+
     std::cout << "  -> SyntaxHighlighter PASS" << std::endl;
 }
 
 void TestHtmlExporter() {
     std::cout << "[TEST] HtmlExporter..." << std::endl;
 
-    std::wstring md = L"# Title\n\nPersian: سلام دنیا\n\n- Item 1\n- Item 2\n\n> [!NOTE]\n> Alert test\n\n$$E = mc^2$$\n\n```mermaid\ngraph TD\nA-->B\n```\n";
+    std::wstring md =
+        L"# Title\n\n"
+        L"Persian: سلام دنیا\n\n"
+        L"- ایران: `/usr/local/bin/ir.yaml`\n\n"
+        L"فایل binary باید `/usr/local/bin/gost` باشد.\n\n"
+        L"```text\n"
+        L"/usr/local/bin/fullchain.cer\n"
+        L"/usr/local/bin/jojo-data.com.key\n"
+        L"```\n\n"
+        L"```bash\n"
+        L"chown root:root /usr/local/bin/gost\n"
+        L"chmod 0755 /usr/local/bin/gost\n"
+        L"```\n\n"
+        L"> [!NOTE]\n"
+        L"> Alert test\n\n"
+        L"$$E = mc^2$$\n\n"
+        L"```mermaid\n"
+        L"graph TD\n"
+        L"A-->B\n"
+        L"```\n";
+
     MarkdownDocument doc = MarkdownParser::Parse(md);
     std::wstring html = HtmlExporter::ExportToHtml(doc, L"Test Title", true);
 
@@ -195,7 +229,26 @@ void TestHtmlExporter() {
     assert(html.find(L"</ul>") != std::wstring::npos);
     assert(html.find(L"alert-callout") != std::wstring::npos);
 
-    // Test modern GeneratePreviewHtml (Glassmorphic Toolbar, KaTeX, Mermaid, Search, TOC)
+    // 1. Verify BiDi isolated inline code
+    assert(html.find(L"<code class=\"inline-code\" dir=\"ltr\"><bdi dir=\"ltr\">/usr/local/bin/ir.yaml</bdi></code>") != std::wstring::npos);
+    assert(html.find(L"<code class=\"inline-code\" dir=\"ltr\"><bdi dir=\"ltr\">/usr/local/bin/gost</bdi></code>") != std::wstring::npos);
+
+    // 2. Verify code block text is intact and NOT blank
+    assert(html.find(L"/usr/local/bin/fullchain.cer") != std::wstring::npos);
+    assert(html.find(L"/usr/local/bin/jojo-data.com.key") != std::wstring::npos);
+    assert(html.find(L"chown") != std::wstring::npos);
+    assert(html.find(L"chmod") != std::wstring::npos);
+
+    // Verify code block does NOT have nested <!DOCTYPE html> inside <pre><code>
+    size_t prePos = html.find(L"<pre><code>");
+    assert(prePos != std::wstring::npos);
+    size_t codeEndPos = html.find(L"</code></pre>", prePos);
+    assert(codeEndPos != std::wstring::npos);
+    std::wstring preCodeContent = html.substr(prePos, codeEndPos - prePos);
+    assert(preCodeContent.find(L"<!DOCTYPE") == std::wstring::npos);
+    assert(preCodeContent.find(L"<floating-toolbar") == std::wstring::npos);
+
+    // 3. Test modern GeneratePreviewHtml
     std::string previewHtml = HtmlExporter::GeneratePreviewHtml(doc, L"Preview Title", true, 1.0f, true);
     assert(!previewHtml.empty());
     assert(previewHtml.find("floating-toolbar") != std::string::npos);
@@ -204,6 +257,23 @@ void TestHtmlExporter() {
     assert(previewHtml.find("katex") != std::string::npos);
     assert(previewHtml.find("mermaid") != std::string::npos);
 
+    // 4. Verify 100% offline / zero network links (no external CDNs or external fonts)
+    assert(previewHtml.find("fonts.googleapis.com") == std::string::npos);
+    assert(previewHtml.find("fonts.gstatic.com") == std::string::npos);
+    assert(previewHtml.find("cdn.jsdelivr.net") == std::string::npos);
+    assert(previewHtml.find("http://") == std::string::npos);
+    // The only https:// references allowed are MathML/SVG namespace URIs like xmlns="http://www.w3.org/..."
+    assert(previewHtml.find("https://cdn.") == std::string::npos);
+    assert(previewHtml.find("https://fonts.") == std::string::npos);
+
+    // 5. Test GeneratePreviewComponents for instant in-place DOM updates
+    auto components = HtmlExporter::GeneratePreviewComponents(doc, L"Preview Title", true, 1.0f, true);
+    assert(!components.fullHtml.empty());
+    assert(!components.bodyHtml.empty());
+    assert(!components.tocHtml.empty());
+    assert(!components.statsText.empty());
+    assert(components.bodyHtml.find("<!DOCTYPE") == std::string::npos); // Clean body fragment!
+    assert(components.bodyHtml.find("/usr/local/bin/fullchain.cer") != std::string::npos);
     std::cout << "  -> HtmlExporter PASS" << std::endl;
 }
 

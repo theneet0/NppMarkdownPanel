@@ -299,18 +299,66 @@ void WebView2Viewer::SetVisible(bool visible) {
     }
 }
 
+namespace {
+std::wstring EscapeJsonWide(const std::string& utf8Str) {
+    if (utf8Str.empty()) return L"";
+    int wideLen = MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, nullptr, 0);
+    if (wideLen <= 0) return L"";
+    std::wstring wide(wideLen - 1, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, &wide[0], wideLen);
+
+    std::wstringstream ss;
+    for (wchar_t ch : wide) {
+        switch (ch) {
+            case L'\\': ss << L"\\\\"; break;
+            case L'\"': ss << L"\\\""; break;
+            case L'\b': ss << L"\\b"; break;
+            case L'\f': ss << L"\\f"; break;
+            case L'\n': ss << L"\\n"; break;
+            case L'\r': ss << L"\\r"; break;
+            case L'\t': ss << L"\\t"; break;
+            default:
+                if (ch < 0x20) {
+                    wchar_t buf[7];
+                    swprintf_s(buf, L"\\u%04x", (unsigned int)ch);
+                    ss << buf;
+                } else {
+                    ss << ch;
+                }
+                break;
+        }
+    }
+    return ss.str();
+}
+} // namespace
+
 void WebView2Viewer::SetHtmlContent(const std::string& htmlUtf8) {
     if (!m_isInitialized || !m_pWebView) {
         m_pendingHtml = htmlUtf8;
         return;
     }
 
+    m_pageReady = false;
     int wideLen = MultiByteToWideChar(CP_UTF8, 0, htmlUtf8.c_str(), -1, nullptr, 0);
     if (wideLen > 0) {
         std::wstring wideHtml(wideLen, L'\0');
         MultiByteToWideChar(CP_UTF8, 0, htmlUtf8.c_str(), -1, &wideHtml[0], wideLen);
         m_pWebView->NavigateToString(wideHtml.c_str());
     }
+}
+
+bool WebView2Viewer::UpdateContent(const std::string& bodyHtml, const std::string& tocHtml, const std::string& statsText) {
+    if (!m_isInitialized || !m_pWebView || !m_pageReady) {
+        return false;
+    }
+
+    std::wstringstream json;
+    json << L"{\"type\":\"updateContent\",\"body\":\"" << EscapeJsonWide(bodyHtml)
+         << L"\",\"toc\":\"" << EscapeJsonWide(tocHtml)
+         << L"\",\"stats\":\"" << EscapeJsonWide(statsText) << L"\"}";
+
+    HRESULT hr = m_pWebView->PostWebMessageAsJson(json.str().c_str());
+    return SUCCEEDED(hr);
 }
 
 void WebView2Viewer::ExecuteScript(const std::wstring& script) {
@@ -322,7 +370,8 @@ void WebView2Viewer::ExecuteScript(const std::wstring& script) {
 void WebView2Viewer::SetDarkMode(bool isDark) {
     m_darkMode = isDark;
     if (m_isInitialized) {
-        std::wstring script = isDark ? L"document.body.classList.add('dark');" : L"document.body.classList.remove('dark');";
+        std::wstring script = isDark ? L"document.body.classList.add('dark'); if (window.onThemeChanged) window.onThemeChanged();"
+                                     : L"document.body.classList.remove('dark'); if (window.onThemeChanged) window.onThemeChanged();";
         ExecuteScript(script);
     }
 }
@@ -349,6 +398,11 @@ void WebView2Viewer::PrintToPdf(const std::wstring& pdfPath) {
 }
 
 void WebView2Viewer::OnWebMessageReceived(const std::wstring& message) {
+    if (message == L"pageLoaded") {
+        m_pageReady = true;
+        return;
+    }
+
     const std::wstring prefixCheckbox = L"toggleCheckbox:";
     if (message.find(prefixCheckbox) == 0) {
         std::wstring lineStr = message.substr(prefixCheckbox.length());
@@ -362,6 +416,7 @@ void WebView2Viewer::OnWebMessageReceived(const std::wstring& message) {
 void WebView2Viewer::Close() {
     m_isInitialized = false;
     m_isInitializing = false;
+    m_pageReady = false;
 
     if (m_pWebView) {
         m_pWebView->Release();

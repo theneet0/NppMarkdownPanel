@@ -44,6 +44,30 @@ const std::unordered_set<std::wstring> s_jsKeywords = {
     L"undefined", L"var", L"void", L"while", L"with", L"yield"
 };
 
+const std::unordered_set<std::wstring> s_bashKeywords = {
+    L"sudo", L"chmod", L"chown", L"chgrp", L"systemctl", L"journalctl", L"service",
+    L"echo", L"cat", L"grep", L"egrep", L"fgrep", L"sed", L"awk", L"find", L"xargs",
+    L"mkdir", L"rmdir", L"rm", L"cp", L"mv", L"ln", L"touch", L"ls", L"cd", L"pwd",
+    L"curl", L"wget", L"tar", L"gzip", L"gunzip", L"zip", L"unzip", L"ssh", L"scp",
+    L"apt", L"apt-get", L"yum", L"dnf", L"pacman", L"apk", L"docker", L"git",
+    L"export", L"source", L"alias", L"unalias", L"set", L"unset", L"read", L"local",
+    L"if", L"fi", L"then", L"else", L"elif", L"for", L"in", L"do", L"done",
+    L"case", L"esac", L"while", L"until", L"break", L"continue", L"exit", L"return",
+    L"function", L"select", L"time", L"exec", L"eval", L"trap", L"wait", L"kill"
+};
+
+const std::unordered_set<std::wstring> s_yamlKeywords = {
+    L"true", L"false", L"null", L"yes", L"no", L"on", L"off"
+};
+
+const std::unordered_set<std::wstring> s_sqlKeywords = {
+    L"select", L"from", L"where", L"insert", L"update", L"delete", L"into", L"values",
+    L"join", L"inner", L"outer", L"left", L"right", L"on", L"group", L"by", L"order",
+    L"having", L"limit", L"create", L"table", L"drop", L"alter", L"add", L"and", L"or",
+    L"not", L"in", L"is", L"null", L"as", L"distinct", L"case", L"when", L"then", L"else",
+    L"end", L"primary", L"key", L"foreign", L"references", L"index"
+};
+
 } // namespace
 
 std::vector<HighlightToken> SyntaxHighlighter::Tokenize(const std::wstring& line, const std::wstring& language) {
@@ -55,7 +79,9 @@ std::vector<HighlightToken> SyntaxHighlighter::Tokenize(const std::wstring& line
 
     bool isPy = (lowerLang == L"python" || lowerLang == L"py");
     bool isJs = (lowerLang == L"js" || lowerLang == L"javascript" || lowerLang == L"ts" || lowerLang == L"typescript");
-    bool isSh = (lowerLang == L"bash" || lowerLang == L"sh" || lowerLang == L"shell" || lowerLang == L"powershell" || lowerLang == L"ps1");
+    bool isSh = (lowerLang == L"bash" || lowerLang == L"sh" || lowerLang == L"shell" || lowerLang == L"powershell" || lowerLang == L"ps1" || lowerLang == L"zsh");
+    bool isYaml = (lowerLang == L"yaml" || lowerLang == L"yml");
+    bool isSql = (lowerLang == L"sql");
 
     size_t i = 0;
     while (i < line.size()) {
@@ -69,7 +95,8 @@ std::vector<HighlightToken> SyntaxHighlighter::Tokenize(const std::wstring& line
 
         // Single line comments
         if ((ch == L'/' && i + 1 < line.size() && line[i + 1] == L'/') ||
-            ((isPy || isSh) && ch == L'#')) {
+            ((isPy || isSh || isYaml) && ch == L'#') ||
+            (isSql && ch == L'-' && i + 1 < line.size() && line[i + 1] == L'-')) {
             HighlightToken token;
             token.type = HighlightTokenType::Comment;
             token.start = i;
@@ -78,8 +105,28 @@ std::vector<HighlightToken> SyntaxHighlighter::Tokenize(const std::wstring& line
             break;
         }
 
+        // Shell variables: $VAR or ${VAR}
+        if (isSh && ch == L'$') {
+            size_t start = i;
+            i++;
+            if (i < line.size() && line[i] == L'{') {
+                while (i < line.size() && line[i] != L'}') i++;
+                if (i < line.size() && line[i] == L'}') i++;
+            } else {
+                while (i < line.size() && (std::iswalnum(line[i]) || line[i] == L'_' || line[i] == L'?')) i++;
+            }
+            if (i > start + 1) {
+                HighlightToken token;
+                token.type = HighlightTokenType::Type;
+                token.start = start;
+                token.length = i - start;
+                tokens.push_back(token);
+                continue;
+            }
+        }
+
         // Preprocessor / directive (#include, etc.)
-        if (!isPy && !isSh && ch == L'#' && i == 0) {
+        if (!isPy && !isSh && !isYaml && ch == L'#' && i == 0) {
             HighlightToken token;
             token.type = HighlightTokenType::Preprocessor;
             token.start = i;
@@ -146,6 +193,21 @@ std::vector<HighlightToken> SyntaxHighlighter::Tokenize(const std::wstring& line
                 else token.type = HighlightTokenType::Default;
             } else if (isJs) {
                 if (s_jsKeywords.count(word)) token.type = HighlightTokenType::Keyword;
+                else token.type = HighlightTokenType::Default;
+            } else if (isSh) {
+                std::wstring lowerWord = word;
+                std::transform(lowerWord.begin(), lowerWord.end(), lowerWord.begin(), ::towlower);
+                if (s_bashKeywords.count(lowerWord)) token.type = HighlightTokenType::Keyword;
+                else token.type = HighlightTokenType::Default;
+            } else if (isYaml) {
+                std::wstring lowerWord = word;
+                std::transform(lowerWord.begin(), lowerWord.end(), lowerWord.begin(), ::towlower);
+                if (s_yamlKeywords.count(lowerWord)) token.type = HighlightTokenType::Keyword;
+                else token.type = HighlightTokenType::Default;
+            } else if (isSql) {
+                std::wstring lowerWord = word;
+                std::transform(lowerWord.begin(), lowerWord.end(), lowerWord.begin(), ::towlower);
+                if (s_sqlKeywords.count(lowerWord)) token.type = HighlightTokenType::Keyword;
                 else token.type = HighlightTokenType::Default;
             } else {
                 if (s_cppKeywords.count(word)) token.type = HighlightTokenType::Keyword;

@@ -428,14 +428,19 @@ void NppMarkdownPanel::ExecuteRender() {
                   (m_config.darkModeOverride == -1 && SendMessage(m_nppData._nppHandle, NPPM_ISDARKMODEENABLED, 0, 0) != 0);
 
     if (m_useWebView2) {
-        std::string previewHtml = HtmlExporter::GeneratePreviewHtml(
+        auto components = HtmlExporter::GeneratePreviewComponents(
             m_currentDoc,
             docTitle,
             isDark,
             m_config.zoomLevel,
             m_config.syncWithCaret
         );
-        m_webViewViewer.SetHtmlContent(previewHtml);
+
+        if (m_webViewViewer.IsPageReady()) {
+            m_webViewViewer.UpdateContent(components.bodyHtml, components.tocHtml, components.statsText);
+        } else {
+            m_webViewViewer.SetHtmlContent(components.fullHtml);
+        }
 
         if (m_config.syncWithCaret || m_config.syncWithFirstLine) {
             int line = m_config.syncWithCaret ? GetScintillaCaretLine(hSci) : GetScintillaFirstVisibleLine(hSci);

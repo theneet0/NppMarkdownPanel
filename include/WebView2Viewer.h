@@ -28,9 +28,11 @@ public:
     void Resize(int x, int y, int width, int height);
     void SetVisible(bool visible);
     bool IsInitialized() const { return m_isInitialized; }
+    bool IsPageReady() const { return m_isInitialized && m_pageReady; }
 
     // Content updates
     void SetHtmlContent(const std::string& htmlUtf8);
+    bool UpdateContent(const std::string& bodyHtml, const std::string& tocHtml, const std::string& statsText);
     void ExecuteScript(const std::wstring& script);
 
     // Visual settings
@@ -53,6 +55,7 @@ private:
     HMODULE m_hLoaderModule = nullptr;
     bool m_isInitialized = false;
     bool m_isInitializing = false;
+    bool m_pageReady = false;
     bool m_darkMode = false;
     float m_zoom = 1.0f;
     std::string m_pendingHtml;
