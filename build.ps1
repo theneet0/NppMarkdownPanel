@@ -28,15 +28,39 @@ $bin32Dir = Join-Path $binDir "x86"
 if (-not (Test-Path $binDir)) { New-Item -ItemType Directory -Path $binDir | Out-Null }
 if (-not (Test-Path $bin32Dir)) { New-Item -ItemType Directory -Path $bin32Dir | Out-Null }
 
-# Ensure WebView2 package is present from local nuget cache
-$wv2PkgDir = Join-Path $scriptDir "packages\Microsoft.Web.WebView2.1.0.3650.58"
-if (-not (Test-Path "$wv2PkgDir\build\native\include\WebView2.h")) {
-    $nugetCache = Join-Path $env:USERPROFILE ".nuget\packages\microsoft.web.webview2\1.0.3650.58"
+# Ensure WebView2 SDK package is present
+$wv2Version = "1.0.4191.47"
+$wv2PkgDir = Join-Path $scriptDir "packages\Microsoft.Web.WebView2.$wv2Version"
+$wv2Header = Join-Path $wv2PkgDir "build\native\include\WebView2.h"
+$wv2Loader64 = Join-Path $wv2PkgDir "build\native\x64\WebView2Loader.dll"
+$wv2Loader32 = Join-Path $wv2PkgDir "build\native\x86\WebView2Loader.dll"
+
+if (-not (Test-Path $wv2Header) -or -not (Test-Path $wv2Loader64) -or -not (Test-Path $wv2Loader32)) {
+    Write-Host ">>> Restoring Microsoft.Web.WebView2 v$wv2Version..." -ForegroundColor Cyan
+    $nugetCache = Join-Path $env:USERPROFILE ".nuget\packages\microsoft.web.webview2\$wv2Version"
     if (Test-Path "$nugetCache\build\native\include\WebView2.h") {
         New-Item -ItemType Directory -Path (Split-Path -Parent $wv2PkgDir) -Force | Out-Null
         Copy-Item -Path $nugetCache -Destination $wv2PkgDir -Recurse -Force
+    } else {
+        $tempZip = Join-Path $env:TEMP "webview2.$wv2Version.zip"
+        $downloadUrl = "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/$wv2Version"
+        try {
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
+            Invoke-WebRequest -Uri $downloadUrl -OutFile $tempZip -UseBasicParsing
+        } catch {
+            Write-Host "Invoke-WebRequest failed, trying curl.exe..." -ForegroundColor Yellow
+            & curl.exe -s -L -o $tempZip $downloadUrl
+        }
+        if (-not (Test-Path $tempZip) -or (Get-Item $tempZip).Length -lt 1000) {
+            Write-Error "Failed to download WebView2 NuGet package from $downloadUrl"
+            exit 1
+        }
+        New-Item -ItemType Directory -Path $wv2PkgDir -Force | Out-Null
+        Expand-Archive -Path $tempZip -DestinationPath $wv2PkgDir -Force
+        Remove-Item $tempZip -Force -ErrorAction SilentlyContinue
     }
 }
+$wv2Include = Join-Path $wv2PkgDir "build\native\include"
 
 # 2. Compile and run unit tests
 Write-Host "`n>>> [1/3] Building and running unit tests..." -ForegroundColor Yellow
@@ -55,10 +79,15 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-& $testExe
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "Unit tests failed!"
-    exit $LASTEXITCODE
+Push-Location $scriptDir
+try {
+    & $testExe
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Unit tests failed!"
+        exit $LASTEXITCODE
+    }
+} finally {
+    Pop-Location
 }
 
 # 3. Build x64 DLL
@@ -80,7 +109,6 @@ $pluginSources = @(
     $resFile64
 )
 
-$wv2Include = Join-Path $scriptDir "packages\Microsoft.Web.WebView2.1.0.3650.58\build\native\include"
 $libs = @("-ld2d1", "-ldwrite", "-luser32", "-lgdi32", "-lcomctl32", "-lshlwapi", "-lole32", "-luuid", "-lcomdlg32")
 
 & $clang64 -shared -std=c++23 -O3 -static -municode -I"$scriptDir\include" -I"$wv2Include" $pluginSources $libs -o "$dllPath64"
@@ -91,7 +119,6 @@ if ($LASTEXITCODE -ne 0) {
 strip --strip-all "$dllPath64"
 
 # Copy x64 WebView2Loader.dll to bin
-$wv2Loader64 = Join-Path $scriptDir "packages\Microsoft.Web.WebView2.1.0.3650.58\build\native\x64\WebView2Loader.dll"
 if (Test-Path $wv2Loader64) {
     Copy-Item $wv2Loader64 -Destination (Join-Path $binDir "WebView2Loader.dll") -Force
 }
@@ -123,7 +150,6 @@ if (Get-Command $clang32 -ErrorAction SilentlyContinue) {
         strip --strip-all "$dllPath32"
 
         # Copy x86 WebView2Loader.dll to bin\x86
-        $wv2Loader32 = Join-Path $scriptDir "packages\Microsoft.Web.WebView2.1.0.3650.58\build\native\x86\WebView2Loader.dll"
         if (Test-Path $wv2Loader32) {
             Copy-Item $wv2Loader32 -Destination (Join-Path $bin32Dir "WebView2Loader.dll") -Force
         }

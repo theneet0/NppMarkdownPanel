@@ -311,9 +311,15 @@ void TestHtmlExporter() {
 
 void TestRealUserDocument() {
     std::cout << "[TEST] Real User Document (gost-systemd-install-fa.md)..." << std::endl;
-    std::ifstream f("E:/cert/GOST3/gost-systemd-install-fa.md", std::ios::binary);
+    std::ifstream f("tests/fixtures/gost-systemd-install-fa.md", std::ios::binary);
     if (!f.is_open()) {
-        std::cout << "  [SKIP] User document file not found at E:/cert/GOST3/..." << std::endl;
+        f.open("gost-systemd-install-fa.md", std::ios::binary);
+    }
+    if (!f.is_open()) {
+        f.open("E:/cert/GOST3/gost-systemd-install-fa.md", std::ios::binary);
+    }
+    if (!f.is_open()) {
+        std::cout << "  [SKIP] User document file not found in tests/fixtures/ or E:/cert/GOST3/..." << std::endl;
         return;
     }
     std::string bytes((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());

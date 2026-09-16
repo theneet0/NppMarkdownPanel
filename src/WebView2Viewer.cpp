@@ -1,7 +1,7 @@
 #include "../include/WebView2Viewer.h"
 #include "../include/BiDiEngine.h"
 #include <initguid.h>
-#include "../packages/Microsoft.Web.WebView2.1.0.3650.58/build/native/include/WebView2.h"
+#include <WebView2.h>
 #include <shlwapi.h>
 #include <shellapi.h>
 #include <sstream>
