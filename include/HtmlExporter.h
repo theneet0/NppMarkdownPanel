@@ -5,12 +5,23 @@
 
 class HtmlExporter {
 public:
+    // Generate full interactive HTML for WebView2 preview with modern floating UI, KaTeX, Mermaid, TOC, and Search
+    static std::string GeneratePreviewHtml(
+        const MarkdownDocument& doc,
+        const std::wstring& title,
+        bool isDarkMode,
+        float zoomLevel,
+        bool isSyncEnabled
+    );
+
+    // Standalone export to HTML file
     static std::wstring ExportToHtml(const MarkdownDocument& doc, const std::wstring& title, bool isDarkMode);
     static bool SaveToFile(const std::wstring& filePath, const MarkdownDocument& doc, const std::wstring& title, bool isDarkMode);
     static bool CopyToClipboard(HWND hwndOwner, const MarkdownDocument& doc, const std::wstring& title, bool isDarkMode);
 
 private:
     static std::wstring EscapeHtml(const std::wstring& str);
+    static std::string EscapeHtmlUtf8(const std::string& str);
     static std::wstring InlinesToHtml(const std::vector<MarkdownSpan>& inlines);
     static std::string GenerateCfHtml(const std::string& htmlFragment);
 };

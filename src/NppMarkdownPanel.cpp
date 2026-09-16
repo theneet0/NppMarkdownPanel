@@ -130,51 +130,61 @@ bool NppMarkdownPanel::CreatePanelWindow() {
     NppLog("NPPM_DMMREGASDCKDLG returned successfully");
     m_isPanelRegistered = true;
 
-    // Initialize Direct2D Renderer now that window is docked
-    NppLog("Initializing Direct2D Renderer");
-    m_renderer.Initialize(m_hPanel);
-    m_renderer.SetZoom(m_config.zoomLevel);
-    NppLog("Direct2D Renderer initialized");
-
     // Dark mode check from Notepad++
     bool isNppDark = SendMessage(m_nppData._nppHandle, NPPM_ISDARKMODEENABLED, 0, 0) != 0;
-    if (m_config.darkModeOverride != -1) {
-        m_renderer.SetDarkMode(m_config.darkModeOverride == 1);
+    bool isDark = (m_config.darkModeOverride == 1) || (m_config.darkModeOverride == -1 && isNppDark);
+
+    // Try initializing modern WebView2 (Chromium Evergreen) first
+    wchar_t tempPath[MAX_PATH] = { 0 };
+    GetTempPathW(MAX_PATH, tempPath);
+    std::wstring userDataDir = std::wstring(tempPath) + L"NppMarkdownPanel_WebView2";
+
+    m_useWebView2 = m_webViewViewer.Initialize(m_hPanel, userDataDir);
+    if (m_useWebView2) {
+        m_webViewViewer.SetDarkMode(isDark);
+        m_webViewViewer.SetZoom(m_config.zoomLevel);
+        m_webViewViewer.SetCheckboxCallback([this](int lineNo) {
+            HWND hSci = GetCurrentScintilla();
+            if (!hSci || lineNo < 1) return;
+            int lineStart = static_cast<int>(SendMessage(hSci, SCI_POSITIONFROMLINE, lineNo - 1, 0));
+            int lineLen = static_cast<int>(SendMessage(hSci, SCI_LINELENGTH, lineNo - 1, 0));
+            if (lineLen > 0) {
+                std::string lineText(lineLen + 1, '\0');
+                SendMessage(hSci, SCI_GETLINE, lineNo - 1, (LPARAM)&lineText[0]);
+                lineText.resize(lineLen);
+
+                size_t uncheckedPos = lineText.find("[ ]");
+                if (uncheckedPos != std::string::npos) {
+                    SendMessage(hSci, SCI_SETSEL, lineStart + static_cast<int>(uncheckedPos), lineStart + static_cast<int>(uncheckedPos) + 3);
+                    SendMessage(hSci, SCI_REPLACESEL, 0, (LPARAM)"[x]");
+                } else {
+                    size_t checkedPos = lineText.find("[x]");
+                    if (checkedPos == std::string::npos) checkedPos = lineText.find("[X]");
+                    if (checkedPos != std::string::npos) {
+                        SendMessage(hSci, SCI_SETSEL, lineStart + static_cast<int>(checkedPos), lineStart + static_cast<int>(checkedPos) + 3);
+                        SendMessage(hSci, SCI_REPLACESEL, 0, (LPARAM)"[ ]");
+                    }
+                }
+            }
+        });
+        NppLog("Modern WebView2 engine initialized successfully");
     } else {
-        m_renderer.SetDarkMode(isNppDark);
+        // Fallback to Direct2D Renderer
+        NppLog("Initializing Direct2D Fallback Renderer");
+        m_renderer.Initialize(m_hPanel);
+        m_renderer.SetZoom(m_config.zoomLevel);
+        m_renderer.SetDarkMode(isDark);
+
+        m_outlineView.Create(m_hPanel, m_hInst);
+        m_outlineView.SetDarkMode(isDark);
+        m_outlineView.SetCallback([](int line, void* userData) {
+            auto* panel = reinterpret_cast<NppMarkdownPanel*>(userData);
+            if (panel) {
+                panel->m_renderer.ScrollToSourceLine(line);
+            }
+        }, this);
+        NppLog("Direct2D Fallback Renderer initialized");
     }
-
-    // Initialize Outline View
-    NppLog("Initializing Outline View");
-    m_outlineView.Create(m_hPanel, m_hInst);
-    m_outlineView.SetDarkMode(m_renderer.IsDarkMode());
-    m_outlineView.SetCallback([](int line, void* userData) {
-        auto* panel = reinterpret_cast<NppMarkdownPanel*>(userData);
-        if (panel) {
-            panel->m_renderer.ScrollToSourceLine(line);
-        }
-    }, this);
-    NppLog("Outline View initialized");
-
-    // Create modern toolbar controls inside panel
-    int btnX = 6;
-    int btnY = 6;
-    int btnH = 26;
-
-    CreateWindowEx(0, L"BUTTON", L"⟳", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, btnX, btnY, 32, btnH, m_hPanel, (HMENU)IDC_BTN_REFRESH, m_hInst, nullptr);
-    btnX += 36;
-    CreateWindowEx(0, L"BUTTON", L"☰ Outline", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, btnX, btnY, 70, btnH, m_hPanel, (HMENU)IDC_BTN_OUTLINE, m_hInst, nullptr);
-    btnX += 74;
-    CreateWindowEx(0, L"BUTTON", L"+", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, btnX, btnY, 30, btnH, m_hPanel, (HMENU)IDC_BTN_ZOOM_IN, m_hInst, nullptr);
-    btnX += 34;
-    CreateWindowEx(0, L"BUTTON", L"-", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, btnX, btnY, 30, btnH, m_hPanel, (HMENU)IDC_BTN_ZOOM_OUT, m_hInst, nullptr);
-    btnX += 34;
-    CreateWindowEx(0, L"BUTTON", L"📋 HTML", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, btnX, btnY, 65, btnH, m_hPanel, (HMENU)IDC_BTN_COPY_HTML, m_hInst, nullptr);
-    btnX += 69;
-    CreateWindowEx(0, L"BUTTON", L"💾 Export", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, btnX, btnY, 65, btnH, m_hPanel, (HMENU)IDC_BTN_EXPORT_HTML, m_hInst, nullptr);
-    btnX += 69;
-    CreateWindowEx(0, L"BUTTON", L"🔄 Sync", WS_CHILD | WS_VISIBLE | BS_CHECKBOX | BS_PUSHLIKE, btnX, btnY, 60, btnH, m_hPanel, (HMENU)IDC_BTN_SYNC_TOGGLE, m_hInst, nullptr);
-    SendMessage(GetDlgItem(m_hPanel, IDC_BTN_SYNC_TOGGLE), BM_SETCHECK, m_config.syncWithCaret ? BST_CHECKED : BST_UNCHECKED, 0);
 
     return true;
 }
@@ -312,21 +322,33 @@ void NppMarkdownPanel::SaveAsHtml() {
 void NppMarkdownPanel::ZoomIn() {
     m_config.zoomLevel += 0.1f;
     if (m_config.zoomLevel > 3.0f) m_config.zoomLevel = 3.0f;
-    m_renderer.SetZoom(m_config.zoomLevel);
-    if (m_hPanel) InvalidateRect(m_hPanel, nullptr, FALSE);
+    if (m_useWebView2) {
+        m_webViewViewer.SetZoom(m_config.zoomLevel);
+    } else {
+        m_renderer.SetZoom(m_config.zoomLevel);
+        if (m_hPanel) InvalidateRect(m_hPanel, nullptr, FALSE);
+    }
 }
 
 void NppMarkdownPanel::ZoomOut() {
     m_config.zoomLevel -= 0.1f;
     if (m_config.zoomLevel < 0.4f) m_config.zoomLevel = 0.4f;
-    m_renderer.SetZoom(m_config.zoomLevel);
-    if (m_hPanel) InvalidateRect(m_hPanel, nullptr, FALSE);
+    if (m_useWebView2) {
+        m_webViewViewer.SetZoom(m_config.zoomLevel);
+    } else {
+        m_renderer.SetZoom(m_config.zoomLevel);
+        if (m_hPanel) InvalidateRect(m_hPanel, nullptr, FALSE);
+    }
 }
 
 void NppMarkdownPanel::ZoomReset() {
     m_config.zoomLevel = 1.0f;
-    m_renderer.SetZoom(m_config.zoomLevel);
-    if (m_hPanel) InvalidateRect(m_hPanel, nullptr, FALSE);
+    if (m_useWebView2) {
+        m_webViewViewer.SetZoom(m_config.zoomLevel);
+    } else {
+        m_renderer.SetZoom(m_config.zoomLevel);
+        if (m_hPanel) InvalidateRect(m_hPanel, nullptr, FALSE);
+    }
 }
 
 void NppMarkdownPanel::ToggleBiDi() {
@@ -382,12 +404,13 @@ void NppMarkdownPanel::ExecuteRender() {
 
     if (wideContent == m_lastRawContent) {
         // Only sync caret position if text didn't change
-        if (m_config.syncWithCaret) {
-            int line = GetScintillaCaretLine(hSci);
-            m_renderer.ScrollToSourceLine(line);
-        } else if (m_config.syncWithFirstLine) {
-            int line = GetScintillaFirstVisibleLine(hSci);
-            m_renderer.ScrollToSourceLine(line);
+        if (m_config.syncWithCaret || m_config.syncWithFirstLine) {
+            int line = m_config.syncWithCaret ? GetScintillaCaretLine(hSci) : GetScintillaFirstVisibleLine(hSci);
+            if (m_useWebView2) {
+                m_webViewViewer.ScrollToLine(line + 1);
+            } else {
+                m_renderer.ScrollToSourceLine(line);
+            }
         }
         return;
     }
@@ -397,34 +420,57 @@ void NppMarkdownPanel::ExecuteRender() {
     // Parse Document
     m_currentDoc = MarkdownParser::Parse(wideContent);
 
-    // Update Outline View
-    std::vector<OutlineNode> outlineNodes;
-    for (const auto& block : m_currentDoc.blocks) {
-        if (block.type >= MarkdownBlockType::Header1 && block.type <= MarkdownBlockType::Header6) {
-            OutlineNode node;
-            node.level = block.level;
-            node.title = block.rawText;
-            node.sourceLine = block.sourceLineStart;
-            outlineNodes.push_back(node);
+    std::wstring currentPath = GetCurrentBufferPath();
+    std::wstring docTitle = PathFindFileNameW(currentPath.c_str());
+    if (docTitle.empty()) docTitle = L"Markdown Preview";
+
+    bool isDark = (m_config.darkModeOverride == 1) ||
+                  (m_config.darkModeOverride == -1 && SendMessage(m_nppData._nppHandle, NPPM_ISDARKMODEENABLED, 0, 0) != 0);
+
+    if (m_useWebView2) {
+        std::string previewHtml = HtmlExporter::GeneratePreviewHtml(
+            m_currentDoc,
+            docTitle,
+            isDark,
+            m_config.zoomLevel,
+            m_config.syncWithCaret
+        );
+        m_webViewViewer.SetHtmlContent(previewHtml);
+
+        if (m_config.syncWithCaret || m_config.syncWithFirstLine) {
+            int line = m_config.syncWithCaret ? GetScintillaCaretLine(hSci) : GetScintillaFirstVisibleLine(hSci);
+            m_webViewViewer.ScrollToLine(line + 1);
         }
+    } else {
+        // Update Outline View
+        std::vector<OutlineNode> outlineNodes;
+        for (const auto& block : m_currentDoc.blocks) {
+            if (block.type >= MarkdownBlockType::Header1 && block.type <= MarkdownBlockType::Header6) {
+                OutlineNode node;
+                node.level = block.level;
+                node.title = block.rawText;
+                node.sourceLine = block.sourceLineStart;
+                outlineNodes.push_back(node);
+            }
+        }
+        m_outlineView.SetHeadings(outlineNodes);
+
+        // Layout in Renderer
+        RECT rc;
+        GetClientRect(m_hPanel, &rc);
+        float outlineW = (m_config.showOutline && m_outlineView.IsVisible()) ? 180.0f : 0.0f;
+        float clientW = static_cast<float>(rc.right - rc.left) - outlineW;
+        m_renderer.SetDocument(m_currentDoc);
+        m_renderer.Layout(clientW);
+
+        // Sync scroll with current position
+        if (m_config.syncWithCaret || m_config.syncWithFirstLine) {
+            int line = m_config.syncWithCaret ? GetScintillaCaretLine(hSci) : GetScintillaFirstVisibleLine(hSci);
+            m_renderer.ScrollToSourceLine(line);
+        }
+
+        InvalidateRect(m_hPanel, nullptr, FALSE);
     }
-    m_outlineView.SetHeadings(outlineNodes);
-
-    // Layout in Renderer
-    RECT rc;
-    GetClientRect(m_hPanel, &rc);
-    float outlineW = (m_config.showOutline && m_outlineView.IsVisible()) ? 180.0f : 0.0f;
-    float clientW = static_cast<float>(rc.right - rc.left) - outlineW;
-    m_renderer.SetDocument(m_currentDoc);
-    m_renderer.Layout(clientW);
-
-    // Sync scroll with current position
-    if (m_config.syncWithCaret) {
-        int line = GetScintillaCaretLine(hSci);
-        m_renderer.ScrollToSourceLine(line);
-    }
-
-    InvalidateRect(m_hPanel, nullptr, FALSE);
 }
 
 void NppMarkdownPanel::OnNotification(SCNotification* notifyCode) {
@@ -439,7 +485,11 @@ void NppMarkdownPanel::OnNotification(SCNotification* notifyCode) {
             HWND hSci = GetCurrentScintilla();
             if (hSci) {
                 int line = m_config.syncWithCaret ? GetScintillaCaretLine(hSci) : GetScintillaFirstVisibleLine(hSci);
-                m_renderer.ScrollToSourceLine(line);
+                if (m_useWebView2) {
+                    m_webViewViewer.ScrollToLine(line + 1);
+                } else {
+                    m_renderer.ScrollToSourceLine(line);
+                }
             }
         }
     }
@@ -450,6 +500,9 @@ void NppMarkdownPanel::OnDarkModeChanged() {
     bool isDark = SendMessage(m_nppData._nppHandle, NPPM_ISDARKMODEENABLED, 0, 0) != 0;
     if (m_config.darkModeOverride != -1) {
         isDark = (m_config.darkModeOverride == 1);
+    }
+    if (m_useWebView2) {
+        m_webViewViewer.SetDarkMode(isDark);
     }
     m_renderer.SetDarkMode(isDark);
     m_outlineView.SetDarkMode(isDark);
@@ -560,54 +613,66 @@ LRESULT CALLBACK NppMarkdownPanel::PanelWndProc(HWND hwnd, UINT msg, WPARAM wPar
             UINT width = LOWORD(lParam);
             UINT height = HIWORD(lParam);
 
-            int toolbarH = 38;
-            float outlineW = (self->m_config.showOutline && self->m_outlineView.IsVisible()) ? 180.0f : 0.0f;
+            if (self->m_useWebView2) {
+                self->m_webViewViewer.Resize(0, 0, width, height);
+            } else {
+                int toolbarH = 0;
+                float outlineW = (self->m_config.showOutline && self->m_outlineView.IsVisible()) ? 180.0f : 0.0f;
 
-            if (self->m_outlineView.IsVisible()) {
-                self->m_outlineView.Resize(static_cast<int>(width - outlineW), toolbarH, static_cast<int>(outlineW), height - toolbarH);
+                if (self->m_outlineView.IsVisible()) {
+                    self->m_outlineView.Resize(static_cast<int>(width - outlineW), toolbarH, static_cast<int>(outlineW), height - toolbarH);
+                }
+
+                self->m_renderer.Resize(static_cast<UINT>(width - outlineW), height - toolbarH);
+                InvalidateRect(hwnd, nullptr, FALSE);
             }
-
-            self->m_renderer.Resize(static_cast<UINT>(width - outlineW), height - toolbarH);
-            InvalidateRect(hwnd, nullptr, FALSE);
             return 0;
         }
 
         case WM_PAINT: {
             PAINTSTRUCT ps;
             BeginPaint(hwnd, &ps);
-            self->m_renderer.Render();
+            if (!self->m_useWebView2) {
+                self->m_renderer.Render();
+            }
             EndPaint(hwnd, &ps);
             return 0;
         }
 
         case WM_MOUSEWHEEL: {
-            int delta = GET_WHEEL_DELTA_WPARAM(wParam);
-            bool isCtrl = (LOWORD(wParam) & MK_CONTROL) != 0;
-            if (isCtrl) {
-                if (delta > 0) self->ZoomIn();
-                else self->ZoomOut();
-            } else {
-                self->m_renderer.ScrollBy(-delta / 2);
+            if (!self->m_useWebView2) {
+                int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+                bool isCtrl = (LOWORD(wParam) & MK_CONTROL) != 0;
+                if (isCtrl) {
+                    if (delta > 0) self->ZoomIn();
+                    else self->ZoomOut();
+                } else {
+                    self->m_renderer.ScrollBy(-delta / 2);
+                }
             }
             return 0;
         }
 
         case WM_MOUSEMOVE: {
-            int x = LOWORD(lParam);
-            int y = HIWORD(lParam) - 38; // Subtract toolbar height
-            if (y >= 0 && self->m_renderer.OnMouseMove(x, y)) {
-                InvalidateRect(hwnd, nullptr, FALSE);
+            if (!self->m_useWebView2) {
+                int x = LOWORD(lParam);
+                int y = HIWORD(lParam);
+                if (y >= 0 && self->m_renderer.OnMouseMove(x, y)) {
+                    InvalidateRect(hwnd, nullptr, FALSE);
+                }
             }
             return 0;
         }
 
         case WM_LBUTTONDOWN: {
-            int x = LOWORD(lParam);
-            int y = HIWORD(lParam) - 38; // Subtract toolbar height
-            if (y >= 0) {
-                HWND hSci = self->GetCurrentScintilla();
-                if (self->m_renderer.OnLButtonDown(x, y, hSci)) {
-                    InvalidateRect(hwnd, nullptr, FALSE);
+            if (!self->m_useWebView2) {
+                int x = LOWORD(lParam);
+                int y = HIWORD(lParam);
+                if (y >= 0) {
+                    HWND hSci = self->GetCurrentScintilla();
+                    if (self->m_renderer.OnLButtonDown(x, y, hSci)) {
+                        InvalidateRect(hwnd, nullptr, FALSE);
+                    }
                 }
             }
             return 0;

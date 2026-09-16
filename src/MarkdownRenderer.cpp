@@ -101,9 +101,13 @@ HRESULT MarkdownRenderer::CreateDeviceIndependentResources() {
 
     // Body Formats (LTR & RTL)
     m_pDWriteFactory->CreateTextFormat(fontText, nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, scaledBase, L"en-us", &m_pFormatBody);
-    m_pDWriteFactory->CreateTextFormat(fontText, nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, scaledBase, L"fa-ir", &m_pFormatBodyRTL);
+    if (m_pFormatBody) {
+        m_pFormatBody->SetWordWrapping(DWRITE_WORD_WRAPPING_WRAP);
+    }
     if (m_pFormatBodyRTL) {
-        m_pFormatBodyRTL->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_TRAILING);
+        m_pFormatBodyRTL->SetReadingDirection(DWRITE_READING_DIRECTION_RIGHT_TO_LEFT);
+        m_pFormatBodyRTL->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
+        m_pFormatBodyRTL->SetWordWrapping(DWRITE_WORD_WRAPPING_WRAP);
     }
 
     // Code Format

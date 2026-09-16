@@ -60,6 +60,7 @@ $dllPath64 = Join-Path $binDir "NppMarkdownPanel.dll"
 $pluginSources = @(
     (Join-Path $scriptDir "src\Main.cpp"),
     (Join-Path $scriptDir "src\NppMarkdownPanel.cpp"),
+    (Join-Path $scriptDir "src\WebView2Viewer.cpp"),
     (Join-Path $scriptDir "src\MarkdownRenderer.cpp"),
     (Join-Path $scriptDir "src\MarkdownParser.cpp"),
     (Join-Path $scriptDir "src\BiDiEngine.cpp"),
@@ -70,14 +71,22 @@ $pluginSources = @(
     $resFile64
 )
 
-$libs = @("-ld2d1", "-ldwrite", "-luser32", "-lgdi32", "-lcomctl32", "-lshlwapi", "-lole32", "-lcomdlg32")
+$wv2Include = Join-Path $scriptDir "packages\Microsoft.Web.WebView2.1.0.3650.58\build\native\include"
+$libs = @("-ld2d1", "-ldwrite", "-luser32", "-lgdi32", "-lcomctl32", "-lshlwapi", "-lole32", "-luuid", "-lcomdlg32")
 
-& $clang64 -shared -std=c++23 -O3 -static -municode -I"$scriptDir\include" $pluginSources $libs -o "$dllPath64"
+& $clang64 -shared -std=c++23 -O3 -static -municode -I"$scriptDir\include" -I"$wv2Include" $pluginSources $libs -o "$dllPath64"
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to compile x64 NppMarkdownPanel.dll!"
     exit $LASTEXITCODE
 }
 strip --strip-all "$dllPath64"
+
+# Copy x64 WebView2Loader.dll to bin
+$wv2Loader64 = Join-Path $scriptDir "packages\Microsoft.Web.WebView2.1.0.3650.58\build\native\x64\WebView2Loader.dll"
+if (Test-Path $wv2Loader64) {
+    Copy-Item $wv2Loader64 -Destination (Join-Path $binDir "WebView2Loader.dll") -Force
+}
+
 Write-Host "Built x64 DLL: $dllPath64 ($( (Get-Item $dllPath64).Length / 1KB ) KB)" -ForegroundColor Green
 
 # 4. Build x86 DLL (if 32-bit compiler is available)
@@ -90,6 +99,7 @@ if (Get-Command $clang32 -ErrorAction SilentlyContinue) {
     $pluginSources32 = @(
         (Join-Path $scriptDir "src\Main.cpp"),
         (Join-Path $scriptDir "src\NppMarkdownPanel.cpp"),
+        (Join-Path $scriptDir "src\WebView2Viewer.cpp"),
         (Join-Path $scriptDir "src\MarkdownRenderer.cpp"),
         (Join-Path $scriptDir "src\MarkdownParser.cpp"),
         (Join-Path $scriptDir "src\BiDiEngine.cpp"),
@@ -100,9 +110,16 @@ if (Get-Command $clang32 -ErrorAction SilentlyContinue) {
         $resFile32
     )
 
-    & $clang32 -shared -std=c++23 -O3 -static -municode -I"$scriptDir\include" $pluginSources32 $libs -o "$dllPath32"
+    & $clang32 -shared -std=c++23 -O3 -static -municode -I"$scriptDir\include" -I"$wv2Include" $pluginSources32 $libs -o "$dllPath32"
     if ($LASTEXITCODE -eq 0) {
         strip --strip-all "$dllPath32"
+
+        # Copy x86 WebView2Loader.dll to bin\x86
+        $wv2Loader32 = Join-Path $scriptDir "packages\Microsoft.Web.WebView2.1.0.3650.58\build\native\x86\WebView2Loader.dll"
+        if (Test-Path $wv2Loader32) {
+            Copy-Item $wv2Loader32 -Destination (Join-Path $bin32Dir "WebView2Loader.dll") -Force
+        }
+
         Write-Host "Built x86 DLL: $dllPath32 ($( (Get-Item $dllPath32).Length / 1KB ) KB)" -ForegroundColor Green
     }
 }

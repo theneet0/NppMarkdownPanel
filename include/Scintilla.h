@@ -19,6 +19,8 @@
 #define SCI_SETFIRSTVISIBLELINE        2613
 #define SCI_GETLINECOUNT               2154
 #define SCI_LINESONSCREEN              2370
+#define SCI_GETLINE                    2153
+#define SCI_LINELENGTH                 2350
 
 #define SCI_GETBIDIRECTIONAL           2700
 #define SCI_SETBIDIRECTIONAL           2701

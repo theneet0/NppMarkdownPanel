@@ -6,6 +6,7 @@
 #include "Config.h"
 #include "MarkdownRenderer.h"
 #include "OutlineView.h"
+#include "WebView2Viewer.h"
 
 class NppMarkdownPanel {
 public:
@@ -71,8 +72,10 @@ private:
     std::wstring m_configPath;
     MarkdownRenderer m_renderer;
     OutlineView m_outlineView;
+    WebView2Viewer m_webViewViewer;
     MarkdownDocument m_currentDoc;
 
+    bool m_useWebView2 = true;
     bool m_isNppReady = false;
     bool m_isPanelRegistered = false;
     bool m_isPanelVisible = false;
