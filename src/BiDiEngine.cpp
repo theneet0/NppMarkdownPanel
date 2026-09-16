@@ -1,6 +1,8 @@
 #include "../include/BiDiEngine.h"
 #include <windows.h>
 #include <algorithm>
+#include <cstdlib>
+#include <cmath>
 
 bool BiDiEngine::IsRTLChar(wchar_t ch) noexcept {
     // Arabic, Persian, Urdu, Hebrew Unicode blocks
@@ -52,7 +54,7 @@ int BiDiEngine::DigitToInt(wchar_t ch) noexcept {
 std::wstring BiDiEngine::ToPersianDigits(int number) {
     if (number == 0) return L"۰";
     bool negative = number < 0;
-    long long n = std::abs(static_cast<long long>(number));
+    long long n = (number < 0) ? -static_cast<long long>(number) : static_cast<long long>(number);
     std::wstring result;
     while (n > 0) {
         wchar_t pDigit = static_cast<wchar_t>(0x06F0 + (n % 10));
