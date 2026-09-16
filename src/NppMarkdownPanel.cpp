@@ -49,6 +49,8 @@ void NppMarkdownPanel::Init(HINSTANCE hInst, NppData nppData) {
     m_config.Load(m_configPath);
     m_config.isPanelVisible = false;
     m_isPanelVisible = false;
+    m_config.autoShowForMarkdown = false;
+    m_config.showOutline = false;
 
     // CRITICAL: We do NOT call CreatePanelWindow() or send NPPM_DMMREGASDCKDLG here!
     // Docking registration must only occur on NPPN_READY or on-demand, after Notepad++
@@ -178,6 +180,13 @@ bool NppMarkdownPanel::CreatePanelWindow() {
             m_config.darkModeOverride = curDark ? 0 : 1;
             OnDarkModeChanged();
         });
+        m_webViewViewer.SetTocCallback([this](bool isOpen) {
+            m_config.showOutline = isOpen;
+            int cmdOutline = GetPluginCmdId(CMD_TOGGLE_OUTLINE);
+            if (cmdOutline > 0) {
+                SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdOutline, (LPARAM)(isOpen ? TRUE : FALSE));
+            }
+        });
         NppLog("Modern WebView2 engine initialized successfully");
     } else {
         // Fallback to Direct2D Renderer
@@ -300,7 +309,11 @@ void NppMarkdownPanel::ToggleOutline() {
     m_config.showOutline = !m_config.showOutline;
     m_outlineView.Show(m_config.showOutline);
     if (m_useWebView2) {
-        m_webViewViewer.ExecuteScript(L"if (typeof toggleToc === 'function') toggleToc();");
+        if (m_config.showOutline) {
+            m_webViewViewer.ExecuteScript(L"if (typeof openToc === 'function') openToc();");
+        } else {
+            m_webViewViewer.ExecuteScript(L"if (typeof closeToc === 'function') closeToc();");
+        }
     }
     int cmdOutline = GetPluginCmdId(CMD_TOGGLE_OUTLINE);
     if (cmdOutline > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdOutline, (LPARAM)(m_config.showOutline ? TRUE : FALSE));

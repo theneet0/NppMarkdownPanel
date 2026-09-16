@@ -16,6 +16,7 @@ public:
     using NavigationCallback = std::function<void(const std::wstring& url)>;
     using SyncCallback = std::function<void()>;
     using ThemeCallback = std::function<void()>;
+    using TocCallback = std::function<void(bool isOpen)>;
 
     WebView2Viewer();
     ~WebView2Viewer();
@@ -46,6 +47,7 @@ public:
     void SetNavigationCallback(NavigationCallback cb) { m_navCallback = cb; }
     void SetSyncCallback(SyncCallback cb) { m_syncCallback = cb; }
     void SetThemeCallback(ThemeCallback cb) { m_themeCallback = cb; }
+    void SetTocCallback(TocCallback cb) { m_tocCallback = cb; }
 
     // Actions
     void ScrollToLine(int line);
@@ -72,6 +74,7 @@ private:
     NavigationCallback m_navCallback;
     SyncCallback m_syncCallback;
     ThemeCallback m_themeCallback;
+    TocCallback m_tocCallback;
 
     // Internal initialization completion
     void OnEnvironmentCreated(HRESULT result, ICoreWebView2Environment* env);

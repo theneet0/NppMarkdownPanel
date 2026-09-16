@@ -424,6 +424,16 @@ void WebView2Viewer::OnWebMessageReceived(const std::wstring& message) {
         }
         return;
     }
+
+    const std::wstring prefixToc = L"tocStateChanged:";
+    if (message.find(prefixToc) == 0) {
+        std::wstring stateStr = message.substr(prefixToc.length());
+        bool isOpen = (stateStr == L"true");
+        if (m_tocCallback) {
+            m_tocCallback(isOpen);
+        }
+        return;
+    }
 }
 
 void WebView2Viewer::Close() {

@@ -102,13 +102,25 @@ body {
     overflow-x: hidden;
 }
 
-/* Main Content Container */
+/* Main Layout & Content Container */
+#app-layout {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    min-height: 100vh;
+    position: relative;
+    align-items: stretch;
+}
+
 #content-container {
+    flex: 1 1 0;
+    min-width: 0;
     max-width: 900px;
     margin: 0 auto;
     padding: 24px 36px 120px 36px;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    transition: max-width 0.2s ease, padding 0.2s ease;
 }
 
 /* Sleek Floating Search Bar Overlay */
@@ -128,6 +140,16 @@ body {
     border-radius: 24px;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
     transition: all 0.2s ease;
+}
+
+body.toc-open #search-overlay {
+    right: 290px;
+}
+
+@media (max-width: 650px) {
+    body.toc-open #search-overlay {
+        right: 18px;
+    }
 }
 
 #search-input {
@@ -203,6 +225,8 @@ mark.search-match.active {
     position: fixed;
     z-index: 10000;
     min-width: 240px;
+    direction: ltr;
+    text-align: left;
     background: var(--toolbar-bg);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
@@ -303,7 +327,7 @@ mark.search-match.active {
     transform: translateX(-50%) translateY(0);
 }
 
-/* Table of Contents Backdrop & Drawer */
+/* Table of Contents Sticky Sidebar & Responsive Drawer */
 #toc-backdrop {
     display: none;
     position: fixed;
@@ -311,7 +335,7 @@ mark.search-match.active {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.35);
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
     z-index: 9998;
@@ -320,30 +344,42 @@ mark.search-match.active {
     transition: opacity 0.2s ease;
 }
 
-#toc-backdrop.open {
-    display: block;
-    opacity: 1;
-    pointer-events: auto;
-}
-
 #toc-drawer {
-    position: fixed;
-    top: 0;
-    right: -320px;
-    width: min(300px, 85vw);
+    display: none;
+    width: 270px;
+    flex-shrink: 0;
     height: 100vh;
+    position: sticky;
+    top: 0;
     background: var(--drawer-bg);
     border-left: 1px solid var(--border-color);
-    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.35);
-    z-index: 9999;
+    box-shadow: -4px 0 18px rgba(0, 0, 0, 0.06);
+    z-index: 990;
     padding: 18px 16px;
     overflow-y: auto;
-    transition: right 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     box-sizing: border-box;
+    user-select: none;
 }
 
-#toc-drawer.open {
-    right: 0;
+body.toc-open #toc-drawer {
+    display: flex;
+    flex-direction: column;
+}
+
+@media (max-width: 650px) {
+    #toc-drawer {
+        position: fixed;
+        right: 0;
+        top: 0;
+        z-index: 9999;
+        box-shadow: -8px 0 32px rgba(0, 0, 0, 0.35);
+        width: min(290px, 85vw);
+    }
+    body.toc-open #toc-backdrop {
+        display: block;
+        opacity: 1;
+        pointer-events: auto;
+    }
 }
 
 .toc-header {
@@ -388,13 +424,15 @@ mark.search-match.active {
     color: var(--text-secondary);
     text-decoration: none;
     font-size: 12px;
-    padding: 4px 8px;
+    padding: 5px 8px;
     border-radius: 6px;
     margin-bottom: 2px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     transition: all 0.15s ease;
+    unicode-bidi: plaintext;
+    text-align: start;
 }
 
 .toc-item:hover {
@@ -408,10 +446,10 @@ mark.search-match.active {
     background: rgba(9, 105, 218, 0.1);
 }
 
-.toc-l1 { padding-left: 8px; font-weight: 600; }
-.toc-l2 { padding-left: 18px; }
-.toc-l3 { padding-left: 28px; }
-.toc-l4 { padding-left: 38px; }
+.toc-l1 { padding-inline-start: 8px; font-weight: 600; }
+.toc-l2 { padding-inline-start: 18px; }
+.toc-l3 { padding-inline-start: 28px; }
+.toc-l4 { padding-inline-start: 38px; }
 
 /* Markdown Typography */
 h1, h2, h3, h4, h5, h6 {
@@ -1043,7 +1081,7 @@ PreviewComponents HtmlExporter::GeneratePreviewComponents(
   <button class="search-btn search-close" title="Close (Escape)" onclick="closeSearch()">✕</button>
 </div>
 
-<div id="custom-context-menu" class="context-menu" style="display: none;">
+<div id="custom-context-menu" class="context-menu" style="display: none;" onmousedown="event.preventDefault()">
   <div class="menu-item" id="menu-copy-selection" style="display: none;" onclick="copySelectionFromMenu()">
     <span class="menu-icon">✂️</span>
     <span class="menu-label">Copy Selection</span>
@@ -1056,16 +1094,16 @@ PreviewComponents HtmlExporter::GeneratePreviewComponents(
   </div>
   <div class="menu-item" onclick="toggleTocFromMenu()">
     <span class="menu-icon">📑</span>
-    <span class="menu-label">Outline / Table of Contents</span>
+    <span class="menu-label" id="menu-toc-label">Outline / Table of Contents</span>
   </div>
   <div class="menu-separator"></div>
   <div class="menu-item" onclick="toggleThemeFromMenu()">
     <span class="menu-icon">🌓</span>
-    <span class="menu-label">Toggle Dark / Light Theme</span>
+    <span class="menu-label" id="menu-theme-label">Toggle Dark / Light Theme</span>
   </div>
   <div class="menu-item" onclick="toggleSyncFromMenu()">
     <span class="menu-icon">🔄</span>
-    <span class="menu-label">Toggle Caret Sync Scroll</span>
+    <span class="menu-label" id="menu-sync-label">Toggle Caret Sync Scroll</span>
   </div>
   <div class="menu-separator"></div>
   <div class="menu-item" onclick="copyFullHtmlFromMenu()">
@@ -1086,26 +1124,30 @@ PreviewComponents HtmlExporter::GeneratePreviewComponents(
 </div>
 
 <div id="toc-backdrop" onclick="closeToc()"></div>
-<div id="toc-drawer">
-  <div class="toc-header">
-    <div class="toc-title">
-      <span>📑</span>
-      <span>Outline / فهرست مطالب</span>
-    </div>
-    <button class="toc-close" title="Close (Escape)" onclick="closeToc()">✕</button>
-  </div>
-  <div class="toc-content">)HTML";
-    html << tocHtmlUtf8;
-    html << R"HTML(  </div>
-</div>
-
 <div id="toast-msg" class="toast-notification"></div>
 
-<div id="content-container">)HTML";
+<div id="app-layout">
+  <main id="content-container">)HTML";
     html << bodyHtmlUtf8;
-    html << R"HTML(</div>
+    html << R"HTML(  </main>
+  <aside id="toc-drawer">
+    <div class="toc-header">
+      <div class="toc-title">
+        <span>📑</span>
+        <span>Outline / فهرست مطالب</span>
+      </div>
+      <button class="toc-close" title="Close (Escape)" onclick="closeToc()">✕</button>
+    </div>
+    <div class="toc-content">)HTML";
+    html << tocHtmlUtf8;
+    html << R"HTML(    </div>
+  </aside>
+</div>
 
 <script>
+window._syncEnabled = )HTML";
+    html << (isSyncEnabled ? "true" : "false");
+    html << R"HTML(;
 // Native 100% offline MathML engine (KaTeX compatible)
 function renderLocalMath() {
     var container = document.getElementById("content-container");
@@ -1515,7 +1557,7 @@ function copyFullHtmlFromMenu() {
 
 function copySelectionFromMenu() {
     closeContextMenu();
-    var sel = window.getSelection() ? window.getSelection().toString() : "";
+    var sel = window._selectedText || (window.getSelection() ? window.getSelection().toString() : "");
     if (!sel) return;
     var onSuccess = function() {
         showToast("✂️ Selection copied");
@@ -1549,10 +1591,11 @@ window.onThemeChanged = function() {
 
 function toggleSyncFromMenu() {
     closeContextMenu();
+    window._syncEnabled = !window._syncEnabled;
     if (window.chrome && window.chrome.webview) {
         window.chrome.webview.postMessage("toggleSync");
-        showToast("🔄 Caret sync toggled");
     }
+    showToast(window._syncEnabled ? "🔄 Caret sync enabled" : "🔄 Caret sync disabled");
 }
 
 function printFromMenu() {
@@ -1560,25 +1603,32 @@ function printFromMenu() {
     window.print();
 }
 
-// TOC Drawer & Backdrop
+// TOC Sticky Sidebar & Drawer
 function closeToc() {
+    document.body.classList.remove("toc-open");
     var drawer = document.getElementById("toc-drawer");
     var backdrop = document.getElementById("toc-backdrop");
     if (drawer) drawer.classList.remove("open");
     if (backdrop) backdrop.classList.remove("open");
+    if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage("tocStateChanged:false");
+    }
 }
 
 function openToc() {
     closeContextMenu();
+    document.body.classList.add("toc-open");
     var drawer = document.getElementById("toc-drawer");
     var backdrop = document.getElementById("toc-backdrop");
     if (drawer) drawer.classList.add("open");
     if (backdrop) backdrop.classList.add("open");
+    if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage("tocStateChanged:true");
+    }
 }
 
 function toggleToc() {
-    var drawer = document.getElementById("toc-drawer");
-    if (drawer && drawer.classList.contains("open")) {
+    if (document.body.classList.contains("toc-open")) {
         closeToc();
     } else {
         openToc();
@@ -1595,7 +1645,9 @@ function onTocClick(id) {
     if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    closeToc();
+    if (window.innerWidth <= 650) {
+        closeToc();
+    }
 }
 
 // Custom Context Menu
@@ -1606,9 +1658,28 @@ function showContextMenu(x, y) {
     if (!contextMenu) return;
 
     var sel = window.getSelection() ? window.getSelection().toString() : "";
+    window._selectedText = sel;
     var copySelItem = document.getElementById("menu-copy-selection");
     if (copySelItem) {
         copySelItem.style.display = sel.length > 0 ? "flex" : "none";
+    }
+
+    // Dynamic state feedback in menu items
+    var isDark = document.body.classList.contains("dark");
+    var themeLabel = document.getElementById("menu-theme-label");
+    if (themeLabel) {
+        themeLabel.innerText = isDark ? "Switch to Light Theme" : "Switch to Dark Theme";
+    }
+
+    var syncLabel = document.getElementById("menu-sync-label");
+    if (syncLabel) {
+        syncLabel.innerText = window._syncEnabled ? "Caret Sync: Enabled" : "Caret Sync: Disabled";
+    }
+
+    var tocLabel = document.getElementById("menu-toc-label");
+    if (tocLabel) {
+        var isTocOpen = document.body.classList.contains("toc-open");
+        tocLabel.innerText = isTocOpen ? "Hide Outline / TOC" : "Show Outline / TOC";
     }
 
     contextMenu.style.display = "block";
@@ -1718,9 +1789,11 @@ function clearSearch() {
     var marks = container.querySelectorAll("mark.search-match");
     marks.forEach(function(m) {
         var parent = m.parentNode;
-        parent.replaceChild(document.createTextNode(m.textContent), m);
-        parent.normalize();
+        if (parent) {
+            parent.replaceChild(document.createTextNode(m.textContent), m);
+        }
     });
+    container.normalize();
     searchMatches = [];
     currentMatchIndex = -1;
     var countEl = document.getElementById("search-count");
@@ -1752,7 +1825,9 @@ function doSearch() {
             var frag = document.createDocumentFragment();
             var lastIdx = 0;
             while (idx !== -1) {
-                frag.appendChild(document.createTextNode(text.substring(lastIdx, idx)));
+                if (idx > lastIdx) {
+                    frag.appendChild(document.createTextNode(text.substring(lastIdx, idx)));
+                }
                 var mark = document.createElement("mark");
                 mark.className = "search-match";
                 mark.textContent = text.substr(idx, query.length);
@@ -1761,8 +1836,12 @@ function doSearch() {
                 lastIdx = idx + query.length;
                 idx = tLower.indexOf(qLower, lastIdx);
             }
-            frag.appendChild(document.createTextNode(text.substring(lastIdx)));
-            node.parentNode.replaceChild(frag, node);
+            if (lastIdx < text.length) {
+                frag.appendChild(document.createTextNode(text.substring(lastIdx)));
+            }
+            if (node.parentNode) {
+                node.parentNode.replaceChild(frag, node);
+            }
         }
     });
 
@@ -1819,7 +1898,7 @@ document.addEventListener("keydown", function(e) {
             return;
         }
         var tocDrawer = document.getElementById("toc-drawer");
-        if (tocDrawer && tocDrawer.classList.contains("open")) {
+        if (tocDrawer && (tocDrawer.classList.contains("open") || document.body.classList.contains("toc-open"))) {
             closeToc();
             return;
         }
@@ -1847,7 +1926,6 @@ if (window.chrome && window.chrome.webview) {
             try { data = JSON.parse(data); } catch(e) {}
         }
         if (data && data.type === "updateContent") {
-            closeToc();
             if (typeof data.title === "string" && data.title) {
                 document.title = data.title;
             }
