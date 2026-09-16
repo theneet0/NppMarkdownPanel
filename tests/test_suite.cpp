@@ -183,7 +183,7 @@ void TestSyntaxHighlighter() {
 void TestHtmlExporter() {
     std::cout << "[TEST] HtmlExporter..." << std::endl;
 
-    std::wstring md = L"# Title\n\nPersian: سلام دنیا\n\n- Item 1\n- Item 2\n\n> [!NOTE]\n> Alert test\n";
+    std::wstring md = L"# Title\n\nPersian: سلام دنیا\n\n- Item 1\n- Item 2\n\n> [!NOTE]\n> Alert test\n\n$$E = mc^2$$\n\n```mermaid\ngraph TD\nA-->B\n```\n";
     MarkdownDocument doc = MarkdownParser::Parse(md);
     std::wstring html = HtmlExporter::ExportToHtml(doc, L"Test Title", true);
 
@@ -194,6 +194,15 @@ void TestHtmlExporter() {
     assert(html.find(L"<ul") != std::wstring::npos);
     assert(html.find(L"</ul>") != std::wstring::npos);
     assert(html.find(L"alert-callout") != std::wstring::npos);
+
+    // Test modern GeneratePreviewHtml (Glassmorphic Toolbar, KaTeX, Mermaid, Search, TOC)
+    std::string previewHtml = HtmlExporter::GeneratePreviewHtml(doc, L"Preview Title", true, 1.0f, true);
+    assert(!previewHtml.empty());
+    assert(previewHtml.find("floating-toolbar") != std::string::npos);
+    assert(previewHtml.find("search-bar") != std::string::npos);
+    assert(previewHtml.find("toc-drawer") != std::string::npos);
+    assert(previewHtml.find("katex") != std::string::npos);
+    assert(previewHtml.find("mermaid") != std::string::npos);
 
     std::cout << "  -> HtmlExporter PASS" << std::endl;
 }
