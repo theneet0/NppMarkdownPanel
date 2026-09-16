@@ -231,10 +231,10 @@ void WebView2Viewer::OnControllerCreated(HRESULT result, ICoreWebView2Controller
     m_pController->put_IsVisible(TRUE);
 
     if (SUCCEEDED(m_pController->get_CoreWebView2(&m_pWebView)) && m_pWebView) {
-        // Disable default browser context menu for a clean app feel
+        // Disable default browser context menu so our modern custom HTML context menu takes over
         ICoreWebView2Settings* settings = nullptr;
         if (SUCCEEDED(m_pWebView->get_Settings(&settings)) && settings) {
-            settings->put_AreDefaultContextMenusEnabled(TRUE);
+            settings->put_AreDefaultContextMenusEnabled(FALSE);
             settings->put_IsScriptEnabled(TRUE);
             settings->put_IsStatusBarEnabled(FALSE);
             settings->put_AreDevToolsEnabled(FALSE);
@@ -408,6 +408,21 @@ void WebView2Viewer::OnWebMessageReceived(const std::wstring& message) {
         if (m_checkboxCallback) {
             m_checkboxCallback(line);
         }
+        return;
+    }
+
+    if (message == L"toggleSync") {
+        if (m_syncCallback) {
+            m_syncCallback();
+        }
+        return;
+    }
+
+    if (message == L"toggleTheme") {
+        if (m_themeCallback) {
+            m_themeCallback();
+        }
+        return;
     }
 }
 

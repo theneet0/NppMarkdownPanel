@@ -14,6 +14,8 @@ class WebView2Viewer {
 public:
     using CheckboxCallback = std::function<void(int lineNo)>;
     using NavigationCallback = std::function<void(const std::wstring& url)>;
+    using SyncCallback = std::function<void()>;
+    using ThemeCallback = std::function<void()>;
 
     WebView2Viewer();
     ~WebView2Viewer();
@@ -42,6 +44,8 @@ public:
     // Callbacks
     void SetCheckboxCallback(CheckboxCallback cb) { m_checkboxCallback = cb; }
     void SetNavigationCallback(NavigationCallback cb) { m_navCallback = cb; }
+    void SetSyncCallback(SyncCallback cb) { m_syncCallback = cb; }
+    void SetThemeCallback(ThemeCallback cb) { m_themeCallback = cb; }
 
     // Actions
     void ScrollToLine(int line);
@@ -66,6 +70,8 @@ private:
 
     CheckboxCallback m_checkboxCallback;
     NavigationCallback m_navCallback;
+    SyncCallback m_syncCallback;
+    ThemeCallback m_themeCallback;
 
     // Internal initialization completion
     void OnEnvironmentCreated(HRESULT result, ICoreWebView2Environment* env);

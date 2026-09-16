@@ -259,9 +259,11 @@ void TestHtmlExporter() {
     // 3. Test modern GeneratePreviewHtml
     std::string previewHtml = HtmlExporter::GeneratePreviewHtml(doc, L"Preview Title", true, 1.0f, true);
     assert(!previewHtml.empty());
-    assert(previewHtml.find("floating-toolbar") != std::string::npos);
-    assert(previewHtml.find("search-bar") != std::string::npos);
+    assert(previewHtml.find("floating-toolbar") == std::string::npos);
+    assert(previewHtml.find("custom-context-menu") != std::string::npos);
+    assert(previewHtml.find("search-overlay") != std::string::npos);
     assert(previewHtml.find("toc-drawer") != std::string::npos);
+    assert(previewHtml.find("toc-backdrop") != std::string::npos);
     assert(previewHtml.find("katex") != std::string::npos);
     assert(previewHtml.find("mermaid") != std::string::npos);
 

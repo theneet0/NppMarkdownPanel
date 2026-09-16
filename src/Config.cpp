@@ -36,7 +36,7 @@ void PluginConfig::Load(const std::wstring& configPath) {
     syncWithCaret = GetPrivateProfileIntW(sec, L"SyncWithCaret", 1, configPath.c_str()) != 0;
     syncWithFirstLine = GetPrivateProfileIntW(sec, L"SyncWithFirstLine", 0, configPath.c_str()) != 0;
     showOutline = GetPrivateProfileIntW(sec, L"ShowOutline", 0, configPath.c_str()) != 0;
-    autoShowForMarkdown = GetPrivateProfileIntW(sec, L"AutoShowForMarkdown", 1, configPath.c_str()) != 0;
+    autoShowForMarkdown = GetPrivateProfileIntW(sec, L"AutoShowForMarkdown", 0, configPath.c_str()) != 0;
     allowAllExtensions = GetPrivateProfileIntW(sec, L"AllowAllExtensions", 0, configPath.c_str()) != 0;
     isSmartBiDiEnabled = GetPrivateProfileIntW(sec, L"IsSmartBiDiEnabled", 1, configPath.c_str()) != 0;
     darkModeOverride = GetPrivateProfileIntW(sec, L"DarkModeOverride", -1, configPath.c_str());

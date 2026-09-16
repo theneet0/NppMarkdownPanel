@@ -106,112 +106,83 @@ body {
 #content-container {
     max-width: 900px;
     margin: 0 auto;
-    padding: 56px 36px 120px 36px;
+    padding: 24px 36px 120px 36px;
     word-wrap: break-word;
     overflow-wrap: break-word;
 }
 
-/* Floating Glassmorphic Control Bar */
-#floating-toolbar {
+/* Sleek Floating Search Bar Overlay */
+#search-overlay {
     position: fixed;
-    top: 12px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    background: var(--toolbar-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--toolbar-border);
-    border-radius: 30px;
-    box-shadow: var(--toolbar-shadow);
-    transition: all 0.2s ease;
-}
-
-#floating-toolbar:hover {
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
-}
-
-.tool-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-primary);
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.15s ease, transform 0.1s ease;
-    font-size: 14px;
-    position: relative;
-}
-
-.tool-btn:hover {
-    background: rgba(128, 128, 128, 0.18);
-    transform: scale(1.08);
-}
-
-.tool-btn:active {
-    transform: scale(0.95);
-}
-
-.tool-btn.active {
-    background: var(--link-color);
-    color: #ffffff;
-}
-
-.tool-sep {
-    width: 1px;
-    height: 18px;
-    background: var(--border-color);
-    margin: 0 4px;
-}
-
-.stats-pill {
-    font-size: 11px;
-    color: var(--text-secondary);
-    padding: 2px 8px;
-    background: rgba(128, 128, 128, 0.12);
-    border-radius: 12px;
-    white-space: nowrap;
-    user-select: none;
-}
-
-/* Search Bar (Expandable) */
-#search-bar {
+    top: 14px;
+    right: 18px;
+    z-index: 9990;
     display: none;
     align-items: center;
-    gap: 4px;
-    margin-left: 4px;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--toolbar-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+    transition: all 0.2s ease;
 }
 
 #search-input {
     background: rgba(128, 128, 128, 0.12);
     border: 1px solid var(--border-color);
     border-radius: 14px;
-    padding: 3px 10px;
+    padding: 4px 10px;
     font-size: 12px;
     color: var(--text-primary);
-    width: 120px;
+    width: 140px;
     outline: none;
-    transition: width 0.2s ease;
+    transition: width 0.2s ease, border-color 0.2s ease;
 }
 
 #search-input:focus {
-    width: 170px;
+    width: 190px;
     border-color: var(--link-color);
 }
 
 #search-count {
     font-size: 11px;
     color: var(--text-secondary);
-    min-width: 38px;
+    min-width: 36px;
     text-align: center;
+    user-select: none;
+}
+
+.search-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.search-btn:hover {
+    background: rgba(128, 128, 128, 0.2);
+    transform: scale(1.06);
+}
+
+.search-btn:active {
+    transform: scale(0.95);
+}
+
+.search-close {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-left: 2px;
 }
 
 mark.search-match {
@@ -227,20 +198,148 @@ mark.search-match.active {
     font-weight: bold;
 }
 
-/* Table of Contents Drawer */
+/* Modern Glassmorphic Context Menu */
+.context-menu {
+    position: fixed;
+    z-index: 10000;
+    min-width: 240px;
+    background: var(--toolbar-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
+    padding: 6px;
+    user-select: none;
+    font-family: inherit;
+    font-size: 13px;
+    display: none;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text-primary);
+    transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.menu-item:hover {
+    background: rgba(128, 128, 128, 0.16);
+    color: var(--link-color);
+}
+
+.menu-icon {
+    font-size: 14px;
+    width: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.menu-label {
+    flex-grow: 1;
+    white-space: nowrap;
+}
+
+.menu-shortcut {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-left: 8px;
+    font-family: monospace;
+    opacity: 0.85;
+}
+
+.menu-separator {
+    height: 1px;
+    background: var(--border-color);
+    margin: 5px 6px;
+}
+
+.menu-stats {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    border-radius: 6px;
+    background: rgba(128, 128, 128, 0.08);
+}
+
+.menu-stats-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Toast Feedback Notification */
+.toast-notification {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--toolbar-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    color: var(--text-primary);
+    padding: 8px 18px;
+    border-radius: 20px;
+    font-size: 12px;
+    z-index: 10002;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.toast-notification.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Table of Contents Backdrop & Drawer */
+#toc-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    z-index: 9998;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+#toc-backdrop.open {
+    display: block;
+    opacity: 1;
+    pointer-events: auto;
+}
+
 #toc-drawer {
     position: fixed;
     top: 0;
-    right: -280px;
-    width: 270px;
+    right: -320px;
+    width: min(300px, 85vw);
     height: 100vh;
     background: var(--drawer-bg);
     border-left: 1px solid var(--border-color);
-    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.2);
-    z-index: 999;
-    padding: 20px 16px;
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.35);
+    z-index: 9999;
+    padding: 18px 16px;
     overflow-y: auto;
-    transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: right 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-sizing: border-box;
 }
 
 #toc-drawer.open {
@@ -248,14 +347,21 @@ mark.search-match.active {
 }
 
 .toc-header {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.toc-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-primary);
 }
 
 .toc-close {
@@ -264,6 +370,17 @@ mark.search-match.active {
     border: none;
     font-size: 16px;
     color: var(--text-secondary);
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.toc-close:hover {
+    color: var(--text-primary);
+    background: rgba(128, 128, 128, 0.15);
 }
 
 .toc-item {
@@ -629,7 +746,7 @@ math {
 }
 
 @media print {
-    #floating-toolbar, #toc-drawer { display: none !important; }
+    #custom-context-menu, #search-overlay, #toc-drawer, #toc-backdrop, #toast-msg { display: none !important; }
     #content-container { padding: 0 !important; max-width: 100% !important; }
     body { background: #ffffff !important; color: #000000 !important; }
 }
@@ -769,7 +886,7 @@ PreviewComponents HtmlExporter::GeneratePreviewComponents(
 
                 // Add to TOC
                 tocStream << L"<a href=\"#" << hId << L"\" class=\"toc-item toc-l" << hNum << L"\""
-                          << dirAttr << L" onclick=\"document.getElementById('" << hId << L"').scrollIntoView({behavior:'smooth'}); return false;\">"
+                          << dirAttr << L" onclick=\"onTocClick('" << hId << L"'); return false;\">"
                           << hText << L"</a>\n";
                 break;
             }
@@ -915,38 +1032,74 @@ PreviewComponents HtmlExporter::GeneratePreviewComponents(
     html << "<style>\n" << s_modernPreviewCss << "\n</style>\n";
     html << "</head>\n<body class=\"" << (isDarkMode ? "dark" : "") << "\">\n";
 
-    // Floating Glassmorphic Toolbar
+    // In-page overlays & context menu
     html << R"HTML(
-<div id="floating-toolbar">
-  <button class="tool-btn" id="btn-toc" title="Table of Contents (Outline)" onclick="toggleToc()">📑</button>
-  <button class="tool-btn" id="btn-search" title="Find in Document (Ctrl+F)" onclick="toggleSearch()">🔍</button>
-  <div id="search-bar">
-    <input type="text" id="search-input" placeholder="Find..." oninput="doSearch()" onkeydown="onSearchKey(event)" />
-    <span id="search-count">0/0</span>
-    <button class="tool-btn" style="width:24px;height:24px;font-size:11px;" onclick="prevMatch()">▲</button>
-    <button class="tool-btn" style="width:24px;height:24px;font-size:11px;" onclick="nextMatch()">▼</button>
-  </div>
-  <div class="tool-sep"></div>
-  <button class="tool-btn" id="btn-theme" title="Toggle Dark / Light Theme" onclick="toggleTheme()">🌓</button>
-  <button class="tool-btn" id="btn-sync" title="Sync with Notepad++ Caret" onclick="toggleSync(this)">🔄</button>
-  <div class="tool-sep"></div>
-  <button class="tool-btn" id="btn-copy-html" title="Copy Rendered HTML" onclick="copyFullHtml()">📋</button>
-  <button class="tool-btn" id="btn-print" title="Print or Export to PDF" onclick="window.print()">📄</button>
-  <div class="tool-sep"></div>
-  <div class="stats-pill">)HTML";
-    html << statsTextUtf8;
-    html << R"HTML(</div>
+<div id="search-overlay" style="display: none;">
+  <span style="font-size:13px; opacity:0.8;">🔍</span>
+  <input type="text" id="search-input" placeholder="Find in document..." oninput="doSearch()" onkeydown="onSearchKey(event)" />
+  <span id="search-count">0/0</span>
+  <button class="search-btn" title="Previous match (Shift+Enter)" onclick="prevMatch()">▲</button>
+  <button class="search-btn" title="Next match (Enter)" onclick="nextMatch()">▼</button>
+  <button class="search-btn search-close" title="Close (Escape)" onclick="closeSearch()">✕</button>
 </div>
 
+<div id="custom-context-menu" class="context-menu" style="display: none;">
+  <div class="menu-item" id="menu-copy-selection" style="display: none;" onclick="copySelectionFromMenu()">
+    <span class="menu-icon">✂️</span>
+    <span class="menu-label">Copy Selection</span>
+    <span class="menu-shortcut">Ctrl+C</span>
+  </div>
+  <div class="menu-item" onclick="openSearchFromMenu()">
+    <span class="menu-icon">🔍</span>
+    <span class="menu-label">Find in Document</span>
+    <span class="menu-shortcut">Ctrl+F</span>
+  </div>
+  <div class="menu-item" onclick="toggleTocFromMenu()">
+    <span class="menu-icon">📑</span>
+    <span class="menu-label">Outline / Table of Contents</span>
+  </div>
+  <div class="menu-separator"></div>
+  <div class="menu-item" onclick="toggleThemeFromMenu()">
+    <span class="menu-icon">🌓</span>
+    <span class="menu-label">Toggle Dark / Light Theme</span>
+  </div>
+  <div class="menu-item" onclick="toggleSyncFromMenu()">
+    <span class="menu-icon">🔄</span>
+    <span class="menu-label">Toggle Caret Sync Scroll</span>
+  </div>
+  <div class="menu-separator"></div>
+  <div class="menu-item" onclick="copyFullHtmlFromMenu()">
+    <span class="menu-icon">📋</span>
+    <span class="menu-label">Copy Full Rendered HTML</span>
+  </div>
+  <div class="menu-item" onclick="printFromMenu()">
+    <span class="menu-icon">📄</span>
+    <span class="menu-label">Print / Save as PDF</span>
+  </div>
+  <div class="menu-separator"></div>
+  <div class="menu-stats" id="menu-stats-item">
+    <span class="menu-icon">⏱️</span>
+    <span class="menu-stats-text" id="menu-stats-text">)HTML";
+    html << statsTextUtf8;
+    html << R"HTML(</span>
+  </div>
+</div>
+
+<div id="toc-backdrop" onclick="closeToc()"></div>
 <div id="toc-drawer">
   <div class="toc-header">
-    <span>Document Outline</span>
-    <button class="toc-close" onclick="toggleToc()">✕</button>
+    <div class="toc-title">
+      <span>📑</span>
+      <span>Outline / فهرست مطالب</span>
+    </div>
+    <button class="toc-close" title="Close (Escape)" onclick="closeToc()">✕</button>
   </div>
   <div class="toc-content">)HTML";
     html << tocHtmlUtf8;
     html << R"HTML(  </div>
 </div>
+
+<div id="toast-msg" class="toast-notification"></div>
 
 <div id="content-container">)HTML";
     html << bodyHtmlUtf8;
@@ -1328,13 +1481,23 @@ function copyCodeBlock(btn) {
     }
 }
 
+// Toast notification
+function showToast(text) {
+    var toast = document.getElementById("toast-msg");
+    if (!toast) return;
+    toast.textContent = text;
+    toast.classList.add("show");
+    if (window._toastTimer) clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(function() {
+        toast.classList.remove("show");
+    }, 2000);
+}
+
 // Copy full HTML
 function copyFullHtml() {
     var c = document.getElementById("content-container").innerHTML;
     var onSuccess = function() {
-        var btn = document.getElementById("btn-copy-html");
-        btn.innerHTML = "✓";
-        setTimeout(function() { btn.innerHTML = "📋"; }, 1500);
+        showToast("📋 Rendered HTML copied to clipboard");
     };
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(c).then(onSuccess).catch(function() {
@@ -1345,21 +1508,151 @@ function copyFullHtml() {
     }
 }
 
+function copyFullHtmlFromMenu() {
+    closeContextMenu();
+    copyFullHtml();
+}
+
+function copySelectionFromMenu() {
+    closeContextMenu();
+    var sel = window.getSelection() ? window.getSelection().toString() : "";
+    if (!sel) return;
+    var onSuccess = function() {
+        showToast("✂️ Selection copied");
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(sel).then(onSuccess).catch(function() {
+            fallbackCopy(sel, onSuccess);
+        });
+    } else {
+        fallbackCopy(sel, onSuccess);
+    }
+}
+
 // Theme toggle
 function toggleTheme() {
     document.body.classList.toggle("dark");
     renderLocalMermaid();
 }
 
+function toggleThemeFromMenu() {
+    closeContextMenu();
+    toggleTheme();
+    if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage("toggleTheme");
+    }
+}
+
 window.onThemeChanged = function() {
     renderLocalMermaid();
 };
 
-// TOC Drawer toggle
+function toggleSyncFromMenu() {
+    closeContextMenu();
+    if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage("toggleSync");
+        showToast("🔄 Caret sync toggled");
+    }
+}
+
+function printFromMenu() {
+    closeContextMenu();
+    window.print();
+}
+
+// TOC Drawer & Backdrop
+function closeToc() {
+    var drawer = document.getElementById("toc-drawer");
+    var backdrop = document.getElementById("toc-backdrop");
+    if (drawer) drawer.classList.remove("open");
+    if (backdrop) backdrop.classList.remove("open");
+}
+
+function openToc() {
+    closeContextMenu();
+    var drawer = document.getElementById("toc-drawer");
+    var backdrop = document.getElementById("toc-backdrop");
+    if (drawer) drawer.classList.add("open");
+    if (backdrop) backdrop.classList.add("open");
+}
+
 function toggleToc() {
     var drawer = document.getElementById("toc-drawer");
-    drawer.classList.toggle("open");
+    if (drawer && drawer.classList.contains("open")) {
+        closeToc();
+    } else {
+        openToc();
+    }
 }
+
+function toggleTocFromMenu() {
+    closeContextMenu();
+    toggleToc();
+}
+
+function onTocClick(id) {
+    var el = document.getElementById(id);
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    closeToc();
+}
+
+// Custom Context Menu
+var contextMenu = null;
+
+function showContextMenu(x, y) {
+    if (!contextMenu) contextMenu = document.getElementById("custom-context-menu");
+    if (!contextMenu) return;
+
+    var sel = window.getSelection() ? window.getSelection().toString() : "";
+    var copySelItem = document.getElementById("menu-copy-selection");
+    if (copySelItem) {
+        copySelItem.style.display = sel.length > 0 ? "flex" : "none";
+    }
+
+    contextMenu.style.display = "block";
+
+    var menuWidth = contextMenu.offsetWidth || 240;
+    var menuHeight = contextMenu.offsetHeight || 260;
+
+    var posX = x;
+    var posY = y;
+
+    if (posX + menuWidth > window.innerWidth) {
+        posX = window.innerWidth - menuWidth - 8;
+    }
+    if (posY + menuHeight > window.innerHeight) {
+        posY = window.innerHeight - menuHeight - 8;
+    }
+    if (posX < 8) posX = 8;
+    if (posY < 8) posY = 8;
+
+    contextMenu.style.left = posX + "px";
+    contextMenu.style.top = posY + "px";
+}
+
+function closeContextMenu() {
+    if (!contextMenu) contextMenu = document.getElementById("custom-context-menu");
+    if (contextMenu) {
+        contextMenu.style.display = "none";
+    }
+}
+
+window.addEventListener("contextmenu", function(e) {
+    e.preventDefault();
+    showContextMenu(e.clientX, e.clientY);
+});
+
+document.addEventListener("click", function(e) {
+    if (contextMenu && !contextMenu.contains(e.target)) {
+        closeContextMenu();
+    }
+});
+
+window.addEventListener("scroll", function() {
+    closeContextMenu();
+}, true);
 
 // Scroll to Scintilla source line
 window.scrollToSourceLine = function(targetLine) {
@@ -1381,23 +1674,47 @@ window.scrollToSourceLine = function(targetLine) {
     }
 };
 
-// In-Page Realtime Search
+// In-Page Realtime Search Overlay
 var searchMatches = [];
 var currentMatchIndex = -1;
 
-function toggleSearch() {
-    var bar = document.getElementById("search-bar");
-    if (bar.style.display === "flex") {
-        bar.style.display = "none";
-        clearSearch();
-    } else {
-        bar.style.display = "flex";
-        document.getElementById("search-input").focus();
+function openSearch() {
+    closeContextMenu();
+    var overlay = document.getElementById("search-overlay");
+    if (overlay) {
+        overlay.style.display = "flex";
+        var input = document.getElementById("search-input");
+        if (input) {
+            input.focus();
+            input.select();
+            if (input.value) doSearch();
+        }
     }
+}
+
+function closeSearch() {
+    var overlay = document.getElementById("search-overlay");
+    if (overlay) overlay.style.display = "none";
+    clearSearch();
+}
+
+function toggleSearch() {
+    var overlay = document.getElementById("search-overlay");
+    if (overlay && overlay.style.display === "flex") {
+        closeSearch();
+    } else {
+        openSearch();
+    }
+}
+
+function openSearchFromMenu() {
+    closeContextMenu();
+    openSearch();
 }
 
 function clearSearch() {
     var container = document.getElementById("content-container");
+    if (!container) return;
     var marks = container.querySelectorAll("mark.search-match");
     marks.forEach(function(m) {
         var parent = m.parentNode;
@@ -1406,19 +1723,23 @@ function clearSearch() {
     });
     searchMatches = [];
     currentMatchIndex = -1;
-    document.getElementById("search-count").innerText = "0/0";
+    var countEl = document.getElementById("search-count");
+    if (countEl) countEl.innerText = "0/0";
 }
 
 function doSearch() {
     clearSearch();
-    var query = document.getElementById("search-input").value.trim();
+    var input = document.getElementById("search-input");
+    if (!input) return;
+    var query = input.value.trim();
     if (!query) return;
 
     var container = document.getElementById("content-container");
+    if (!container) return;
     var walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
     var textNodes = [];
     while (walker.nextNode()) {
-        if (walker.currentNode.parentElement.closest("pre, code, #floating-toolbar, #toc-drawer")) continue;
+        if (walker.currentNode.parentElement.closest("pre, code, #custom-context-menu, #search-overlay, #toc-drawer, #toast-msg")) continue;
         textNodes.push(walker.currentNode);
     }
 
@@ -1445,11 +1766,12 @@ function doSearch() {
         }
     });
 
+    var countEl = document.getElementById("search-count");
     if (searchMatches.length > 0) {
         currentMatchIndex = 0;
         updateActiveMatch();
     } else {
-        document.getElementById("search-count").innerText = "0/0";
+        if (countEl) countEl.innerText = "0/0";
     }
 }
 
@@ -1459,7 +1781,8 @@ function updateActiveMatch() {
         var active = searchMatches[currentMatchIndex];
         active.classList.add("active");
         active.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        document.getElementById("search-count").innerText = (currentMatchIndex + 1) + "/" + searchMatches.length;
+        var countEl = document.getElementById("search-count");
+        if (countEl) countEl.innerText = (currentMatchIndex + 1) + "/" + searchMatches.length;
     }
 }
 
@@ -1480,25 +1803,36 @@ function onSearchKey(e) {
         if (e.shiftKey) prevMatch();
         else nextMatch();
     } else if (e.key === "Escape") {
-        toggleSearch();
+        closeSearch();
     }
 }
 
 document.addEventListener("keydown", function(e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === "f") {
-        e.preventDefault();
-        var bar = document.getElementById("search-bar");
-        if (bar.style.display !== "flex") {
-            bar.style.display = "flex";
+    if (e.key === "Escape") {
+        if (contextMenu && contextMenu.style.display === "block") {
+            closeContextMenu();
+            return;
         }
-        var input = document.getElementById("search-input");
-        input.focus();
-        input.select();
+        var searchOverlay = document.getElementById("search-overlay");
+        if (searchOverlay && searchOverlay.style.display === "flex") {
+            closeSearch();
+            return;
+        }
+        var tocDrawer = document.getElementById("toc-drawer");
+        if (tocDrawer && tocDrawer.classList.contains("open")) {
+            closeToc();
+            return;
+        }
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        openSearch();
     }
 });
 
 // Initialization & WebView2 Host Communication
 document.addEventListener("DOMContentLoaded", function() {
+    closeToc();
     renderLocalMath();
     renderLocalMermaid();
     if (window.chrome && window.chrome.webview) {
@@ -1513,6 +1847,7 @@ if (window.chrome && window.chrome.webview) {
             try { data = JSON.parse(data); } catch(e) {}
         }
         if (data && data.type === "updateContent") {
+            closeToc();
             if (typeof data.title === "string" && data.title) {
                 document.title = data.title;
             }
@@ -1528,7 +1863,7 @@ if (window.chrome && window.chrome.webview) {
             if (toc && typeof data.toc === "string") {
                 toc.innerHTML = data.toc;
             }
-            var stats = document.querySelector(".stats-pill");
+            var stats = document.getElementById("menu-stats-text");
             if (stats && typeof data.stats === "string") {
                 stats.innerText = data.stats;
             }

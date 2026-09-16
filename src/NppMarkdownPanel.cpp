@@ -47,6 +47,8 @@ void NppMarkdownPanel::Init(HINSTANCE hInst, NppData nppData) {
     }
     m_configPath = std::wstring(configDir) + L"\\NppMarkdownPanel.ini";
     m_config.Load(m_configPath);
+    m_config.isPanelVisible = false;
+    m_isPanelVisible = false;
 
     // CRITICAL: We do NOT call CreatePanelWindow() or send NPPM_DMMREGASDCKDLG here!
     // Docking registration must only occur on NPPN_READY or on-demand, after Notepad++
@@ -166,6 +168,15 @@ bool NppMarkdownPanel::CreatePanelWindow() {
                     }
                 }
             }
+        });
+        m_webViewViewer.SetSyncCallback([this]() {
+            ToggleSyncWithCaret();
+        });
+        m_webViewViewer.SetThemeCallback([this]() {
+            bool isNppDark = SendMessage(m_nppData._nppHandle, NPPM_ISDARKMODEENABLED, 0, 0) != 0;
+            bool curDark = (m_config.darkModeOverride == 1) || (m_config.darkModeOverride == -1 && isNppDark);
+            m_config.darkModeOverride = curDark ? 0 : 1;
+            OnDarkModeChanged();
         });
         NppLog("Modern WebView2 engine initialized successfully");
     } else {
@@ -288,6 +299,9 @@ void NppMarkdownPanel::ToggleSyncWithFirstLine() {
 void NppMarkdownPanel::ToggleOutline() {
     m_config.showOutline = !m_config.showOutline;
     m_outlineView.Show(m_config.showOutline);
+    if (m_useWebView2) {
+        m_webViewViewer.ExecuteScript(L"if (typeof toggleToc === 'function') toggleToc();");
+    }
     int cmdOutline = GetPluginCmdId(CMD_TOGGLE_OUTLINE);
     if (cmdOutline > 0) SendMessage(m_nppData._nppHandle, NPPM_SETMENUITEMCHECK, (WPARAM)cmdOutline, (LPARAM)(m_config.showOutline ? TRUE : FALSE));
 
