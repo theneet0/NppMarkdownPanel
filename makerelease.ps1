@@ -8,7 +8,7 @@ $releaseDir = Join-Path $scriptDir "Release"
 if (Test-Path $releaseDir) { Remove-Item -Recurse -Force $releaseDir }
 New-Item -ItemType Directory -Path $releaseDir | Out-Null
 
-$version = "1.0.2"
+$version = "1.0.3"
 
 # Package x64
 $x64Dll = Join-Path $scriptDir "bin\NppMarkdownPanel.dll"
@@ -46,6 +46,25 @@ if (Test-Path $x86Dll) {
     Compress-Archive -Path "$stageDir86" -DestinationPath $zipX86 -Force
     Remove-Item -Recurse -Force (Join-Path $releaseDir "stage_x86")
     Write-Host "Created Release Archive: $zipX86 ($( (Get-Item $zipX86).Length / 1KB ) KB)" -ForegroundColor Green
+}
+
+# Package ARM64
+$arm64Dll = Join-Path $scriptDir "bin\arm64\NppMarkdownPanel.dll"
+$wv2LoaderArm64 = Join-Path $scriptDir "bin\arm64\WebView2Loader.dll"
+if (Test-Path $arm64Dll) {
+    $zipArm64 = Join-Path $releaseDir "NppMarkdownPanel-$version-arm64.zip"
+    $stageDirArm64 = Join-Path $releaseDir "stage_arm64\NppMarkdownPanel"
+    New-Item -ItemType Directory -Path $stageDirArm64 -Force | Out-Null
+    Copy-Item $arm64Dll -Destination (Join-Path $stageDirArm64 "NppMarkdownPanel.dll")
+    if (Test-Path $wv2LoaderArm64) {
+        Copy-Item $wv2LoaderArm64 -Destination (Join-Path $stageDirArm64 "WebView2Loader.dll")
+    }
+    Copy-Item (Join-Path $scriptDir "README.md") -Destination $stageDirArm64
+    Copy-Item (Join-Path $scriptDir "License.txt") -Destination $stageDirArm64
+
+    Compress-Archive -Path "$stageDirArm64" -DestinationPath $zipArm64 -Force
+    Remove-Item -Recurse -Force (Join-Path $releaseDir "stage_arm64")
+    Write-Host "Created Release Archive: $zipArm64 ($( (Get-Item $zipArm64).Length / 1KB ) KB)" -ForegroundColor Green
 }
 
 Write-Host "[SUCCESS] Release packages created in $releaseDir" -ForegroundColor Cyan

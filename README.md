@@ -92,10 +92,11 @@
 
 ### Manual Installation
 
-1. Download the latest release package matching your Notepad++ architecture (`x64` or `x86`) from the [Releases](https://github.com/theneet0/NppMarkdownPanel/releases) page.
+1. Download the latest release package matching your Notepad++ architecture (`x64`, `x86`, or `arm64`) from the [Releases](https://github.com/theneet0/NppMarkdownPanel/releases) page.
 2. In Notepad++, open `Settings` -> `Import` or navigate to your plugins folder:
-   - **64-bit Notepad++**: `C:\Program Files\Notepad++\plugins\`
-   - **32-bit Notepad++**: `C:\Program Files (x86)\Notepad++\plugins\`
+   - **64-bit Notepad++ (x64)**: `C:\Program Files\Notepad++\plugins\`
+   - **ARM64 Notepad++ (ARM64)**: `C:\Program Files\Notepad++\plugins\`
+   - **32-bit Notepad++ (x86)**: `C:\Program Files (x86)\Notepad++\plugins\`
    - **Portable Notepad++**: `<Notepad++_Folder>\plugins\`
 3. Create a folder named `NppMarkdownPanel`.
 4. Extract `NppMarkdownPanel.dll` and `WebView2Loader.dll` into that folder:
@@ -124,21 +125,21 @@
 ## 🛠️ Building from Source
 
 ### Prerequisites
-- Clang / LLVM toolchain with C++23/C++26 support (`clang++`, `windres`)
+- Clang / LLVM toolchain with C++23/C++26 support (`clang++`, `windres`, plus optional `i686` and `aarch64` targets)
 - Microsoft WebView2 SDK (automatically cached and restored during build)
 
 ### Build Commands
 Run from PowerShell in the repository root:
 
 ```powershell
-# 1. Run unit test suite and compile both x64 and x86 DLLs
+# 1. Run unit test suite and compile x64, x86, and arm64 DLLs
 .\build.ps1
 
 # 2. Package release zip archives
 .\makerelease.ps1
 ```
 
-Compiled binaries will be generated in `bin/` (`x64`) and `bin/x86/` (`x86`), and packaged into `Release/`.
+Compiled binaries will be generated in `bin/` (`x64`), `bin/x86/` (`x86`), and `bin/arm64/` (`arm64`), and packaged into `Release/`.
 
 ---
 

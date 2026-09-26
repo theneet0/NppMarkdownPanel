@@ -403,74 +403,80 @@ void NppMarkdownPanel::RequestRenderDebounced() {
 }
 
 void NppMarkdownPanel::ExecuteRender() {
-    HWND hSci = GetCurrentScintilla();
-    if (!hSci) return;
+    try {
+        HWND hSci = GetCurrentScintilla();
+        if (!hSci) return;
 
-    std::string utf8Content = GetScintillaText(hSci);
-    std::wstring wideContent = BiDiEngine::Utf8ToWide(utf8Content);
+        std::string utf8Content = GetScintillaText(hSci);
+        std::wstring wideContent = BiDiEngine::Utf8ToWide(utf8Content);
 
-    if (wideContent == m_lastRawContent) {
-        // Only sync caret position if text didn't change
-        if (m_config.syncWithCaret) {
-            int line = GetScintillaCaretLine(hSci);
-            if (m_useWebView2) {
-                m_webViewViewer.ScrollToLine(line + 1);
-            } else {
-                m_renderer.ScrollToSourceLine(line);
+        if (wideContent == m_lastRawContent) {
+            // Only sync caret position if text didn't change
+            if (m_config.syncWithCaret) {
+                int line = GetScintillaCaretLine(hSci);
+                if (m_useWebView2) {
+                    m_webViewViewer.ScrollToLine(line + 1);
+                } else {
+                    m_renderer.ScrollToSourceLine(line);
+                }
             }
+            return;
         }
-        return;
-    }
 
-    m_lastRawContent = wideContent;
+        m_lastRawContent = wideContent;
 
-    // Parse Document
-    m_currentDoc = MarkdownParser::Parse(wideContent);
+        // Parse Document
+        m_currentDoc = MarkdownParser::Parse(wideContent);
 
-    std::wstring currentPath = GetCurrentBufferPath();
-    std::wstring docTitle = PathFindFileNameW(currentPath.c_str());
-    if (docTitle.empty()) docTitle = L"Markdown Preview";
+        std::wstring currentPath = GetCurrentBufferPath();
+        std::wstring docTitle = PathFindFileNameW(currentPath.c_str());
+        if (docTitle.empty()) docTitle = L"Markdown Preview";
 
-    bool isDark = (m_config.darkModeOverride == 1) ||
-                  (m_config.darkModeOverride == -1 && SendMessage(m_nppData._nppHandle, NPPM_ISDARKMODEENABLED, 0, 0) != 0);
+        bool isDark = (m_config.darkModeOverride == 1) ||
+                      (m_config.darkModeOverride == -1 && SendMessage(m_nppData._nppHandle, NPPM_ISDARKMODEENABLED, 0, 0) != 0);
 
-    if (m_useWebView2) {
-        auto components = HtmlExporter::GeneratePreviewComponents(
-            m_currentDoc,
-            docTitle,
-            isDark,
-            m_config.zoomLevel,
-            m_config.syncWithCaret
-        );
+        if (m_useWebView2) {
+            auto components = HtmlExporter::GeneratePreviewComponents(
+                m_currentDoc,
+                docTitle,
+                isDark,
+                m_config.zoomLevel,
+                m_config.syncWithCaret
+            );
 
-        if (m_webViewViewer.IsPageReady()) {
-            std::string titleUtf8 = BiDiEngine::WideToUtf8(docTitle);
-            if (!m_webViewViewer.UpdateContent(components.bodyHtml, components.tocHtml, titleUtf8, isDark)) {
+            if (m_webViewViewer.IsPageReady()) {
+                std::string titleUtf8 = BiDiEngine::WideToUtf8(docTitle);
+                if (!m_webViewViewer.UpdateContent(components.bodyHtml, components.tocHtml, titleUtf8, isDark)) {
+                    m_webViewViewer.SetHtmlContent(components.fullHtml);
+                }
+            } else {
                 m_webViewViewer.SetHtmlContent(components.fullHtml);
             }
+
+            if (m_config.syncWithCaret) {
+                int line = GetScintillaCaretLine(hSci);
+                m_webViewViewer.ScrollToLine(line + 1);
+            }
         } else {
-            m_webViewViewer.SetHtmlContent(components.fullHtml);
-        }
+            // Layout in Renderer
+            RECT rc;
+            GetClientRect(m_hPanel, &rc);
+            float clientW = static_cast<float>(rc.right - rc.left);
+            m_renderer.SetDocument(m_currentDoc);
+            m_renderer.Layout(clientW);
 
-        if (m_config.syncWithCaret) {
-            int line = GetScintillaCaretLine(hSci);
-            m_webViewViewer.ScrollToLine(line + 1);
-        }
-    } else {
-        // Layout in Renderer
-        RECT rc;
-        GetClientRect(m_hPanel, &rc);
-        float clientW = static_cast<float>(rc.right - rc.left);
-        m_renderer.SetDocument(m_currentDoc);
-        m_renderer.Layout(clientW);
+            // Sync scroll with current position
+            if (m_config.syncWithCaret) {
+                int line = GetScintillaCaretLine(hSci);
+                m_renderer.ScrollToSourceLine(line);
+            }
 
-        // Sync scroll with current position
-        if (m_config.syncWithCaret) {
-            int line = GetScintillaCaretLine(hSci);
-            m_renderer.ScrollToSourceLine(line);
+            InvalidateRect(m_hPanel, nullptr, FALSE);
         }
-
-        InvalidateRect(m_hPanel, nullptr, FALSE);
+    } catch (const std::exception& ex) {
+        NppLog("ExecuteRender caught exception: %s", ex.what());
+    } catch (...) {
+        NppLog("ExecuteRender caught unknown exception");
     }
 }
 

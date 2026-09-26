@@ -1308,30 +1308,51 @@ function renderLocalMermaid() {
 
         function cleanLabel(raw) {
             if (!raw) return "";
-            return raw.replace(/^[\[\(\{]+|[\]\)\}]+$/g, '').trim();
+            var s = raw.trim();
+            var m = s.match(/^[\[\(\{]+(?:"([^"]*)"|'([^']*)'|(.*?))[\]\)\}]+$/);
+            if (m) {
+                return (m[1] !== undefined ? m[1] : (m[2] !== undefined ? m[2] : m[3])).trim();
+            }
+            return s.replace(/^[\[\(\{]+|[\]\)\}]+$/g, '').replace(/^["']|["']$/g, '').trim();
+        }
+
+        function parseNodeExpr(str) {
+            str = str.trim();
+            var m = str.match(/^([a-zA-Z0-9_\-]+)\s*(.*)$/);
+            if (!m) return null;
+            var id = m[1];
+            var rest = m[2] ? m[2].trim() : "";
+            var label = id;
+            if (rest.length > 0) {
+                label = cleanLabel(rest) || id;
+            }
+            return { id: id, label: label };
         }
 
         for (var i = 0; i < lines.length; i++) {
             var line = lines[i];
             if (line.indexOf("graph") === 0 || line.indexOf("flowchart") === 0) continue;
 
-            var edgeMatch = line.match(/^([a-zA-Z0-9_\-]+)(?:([\[\(\{].*?[\]\)\}]))?\s*(?:(-->|==>|-\.->|---)\s*(?:\|(.*?)\|)?|---\s*\|(.*?)\|\s*-->|-->\|(.*?)\|)\s*([a-zA-Z0-9_\-]+)(?:([\[\(\{].*?[\]\)\}]))?$/);
-            if (edgeMatch) {
-                var uId = edgeMatch[1];
-                var uText = cleanLabel(edgeMatch[2]) || uId;
-                var edgeLabel = edgeMatch[4] || edgeMatch[5] || edgeMatch[6] || "";
-                var vId = edgeMatch[7];
-                var vText = cleanLabel(edgeMatch[8]) || vId;
+            var arrowMatch = line.match(/\s*(-->|==>|-\.->|---)\s*(?:\|(.*?)\|)?\s*/);
+            if (arrowMatch) {
+                var arrowIdx = arrowMatch.index;
+                var leftStr = line.substring(0, arrowIdx).trim();
+                var rightStr = line.substring(arrowIdx + arrowMatch[0].length).trim();
+                var edgeLabel = arrowMatch[2] || "";
 
-                addNode(uId, uText);
-                addNode(vId, vText);
-                nodes[uId].outEdges.push({ to: vId, label: edgeLabel });
-                nodes[vId].inEdges++;
-                edges.push({ from: uId, to: vId, label: edgeLabel });
+                var uNode = parseNodeExpr(leftStr);
+                var vNode = parseNodeExpr(rightStr);
+                if (uNode && vNode) {
+                    addNode(uNode.id, uNode.label);
+                    addNode(vNode.id, vNode.label);
+                    nodes[uNode.id].outEdges.push({ to: vNode.id, label: edgeLabel });
+                    nodes[vNode.id].inEdges++;
+                    edges.push({ from: uNode.id, to: vNode.id, label: edgeLabel });
+                }
             } else {
-                var single = line.match(/^([a-zA-Z0-9_\-]+)(?:([\[\(\{].*?[\]\)\}]))$/);
+                var single = parseNodeExpr(line);
                 if (single) {
-                    addNode(single[1], cleanLabel(single[2]) || single[1]);
+                    addNode(single.id, single.label);
                 }
             }
         }
@@ -1351,13 +1372,16 @@ function renderLocalMermaid() {
         }
 
         var queue = Object.keys(layers);
+        var visitedCount = {};
         while (queue.length > 0) {
             var cur = queue.shift();
+            visitedCount[cur] = (visitedCount[cur] || 0) + 1;
+            if (visitedCount[cur] > nodeKeys.length + 2) continue; // Cycle breaker
             var curL = layers[cur];
             nodes[cur].outEdges.forEach(function(e) {
                 var nxt = e.to;
                 if (layers[nxt] === undefined || layers[nxt] < curL + 1) {
-                    layers[nxt] = curL + 1;
+                    layers[nxt] = Math.min(curL + 1, nodeKeys.length);
                     if (layers[nxt] > maxLayer) maxLayer = layers[nxt];
                     queue.push(nxt);
                 }
@@ -1373,7 +1397,14 @@ function renderLocalMermaid() {
             layerGroups[layers[k]].push(k);
         });
 
-        var nodeWidth = 130;
+        var maxLabelLen = 0;
+        nodeKeys.forEach(function(k) {
+            if (nodes[k].label.length > maxLabelLen) maxLabelLen = nodes[k].label.length;
+        });
+        var nodeWidth = 140;
+        if (maxLabelLen > 14) {
+            nodeWidth = Math.min(240, Math.max(140, maxLabelLen * 8 + 24));
+        }
         var nodeHeight = 44;
         var nodePos = {};
         var svgW = 0, svgH = 0;

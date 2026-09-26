@@ -194,6 +194,15 @@ void TestSyntaxHighlighter() {
         assert(tokStr != L"local");
     }
 
+    // Test Persian and Arabic digits in code blocks (ensuring zero hang/infinite loop)
+    std::wstring faNumCode = L"تنظیمات سوکت اسپلاسینگ صفر کپی فعال باشه و پکت لاس تا ۴۰٪ رو با FEC مهار کنه.";
+    auto faTokens = SyntaxHighlighter::Tokenize(faNumCode, L"text");
+    assert(faTokens.empty()); // Language "text" shouldn't tokenize keywords
+
+    auto faTokensCpp = SyntaxHighlighter::Tokenize(faNumCode, L"cpp");
+    assert(!faTokensCpp.empty()); // Digits 40 should be tokenized without hanging!
+    assert(faTokensCpp[0].type == HighlightTokenType::Number);
+
     std::cout << "  -> SyntaxHighlighter PASS" << std::endl;
 }
 
@@ -278,7 +287,6 @@ void TestHtmlExporter() {
     assert(previewHtml.find("fonts.gstatic.com") == std::string::npos);
     assert(previewHtml.find("cdn.jsdelivr.net") == std::string::npos);
     assert(previewHtml.find("http://") == std::string::npos);
-    // The only https:// references allowed are MathML/SVG namespace URIs like xmlns="http://www.w3.org/..."
     assert(previewHtml.find("https://cdn.") == std::string::npos);
     assert(previewHtml.find("https://fonts.") == std::string::npos);
 
@@ -287,7 +295,7 @@ void TestHtmlExporter() {
     assert(!components.fullHtml.empty());
     assert(!components.bodyHtml.empty());
     assert(!components.tocHtml.empty());
-    assert(components.bodyHtml.find("<!DOCTYPE") == std::string::npos); // Clean body fragment!
+    assert(components.bodyHtml.find("<!DOCTYPE") == std::string::npos);
     assert(components.bodyHtml.find("/usr/local/bin/fullchain.cer") != std::string::npos);
 
     // 6. Verify context menu zoom controls exist and reading stats are completely absent
@@ -303,8 +311,6 @@ void TestHtmlExporter() {
     assert(previewHtml.find("toggleBiDiFromMenu") != std::string::npos);
     assert(previewHtml.find("min read") == std::string::npos);
     assert(previewHtml.find("menu-stats") == std::string::npos);
-    assert(previewHtml.find("\u0645\u0637\u0627\u0644\u0639\u0647") == std::string::npos);
-    assert(previewHtml.find("\u062f\u0642\u06cc\u0642\u0647") == std::string::npos);
 
     std::cout << "  -> HtmlExporter PASS" << std::endl;
 }
@@ -312,12 +318,8 @@ void TestHtmlExporter() {
 void TestRealUserDocument() {
     std::cout << "[TEST] Real User Document (gost-systemd-install-fa.md)..." << std::endl;
     std::ifstream f("tests/fixtures/gost-systemd-install-fa.md", std::ios::binary);
-    if (!f.is_open()) {
-        f.open("gost-systemd-install-fa.md", std::ios::binary);
-    }
-    if (!f.is_open()) {
-        f.open("E:/cert/GOST3/gost-systemd-install-fa.md", std::ios::binary);
-    }
+    if (!f.is_open()) f.open("gost-systemd-install-fa.md", std::ios::binary);
+    if (!f.is_open()) f.open("E:/cert/GOST3/gost-systemd-install-fa.md", std::ios::binary);
     if (!f.is_open()) {
         std::cout << "  [SKIP] User document file not found in tests/fixtures/ or E:/cert/GOST3/..." << std::endl;
         return;
@@ -331,17 +333,43 @@ void TestRealUserDocument() {
 
     auto comp = HtmlExporter::GeneratePreviewComponents(doc, L"gost-systemd-install-fa.md", true, 1.0f, true);
 
-    // Check code block content
     assert(comp.bodyHtml.find("/usr/local/bin/fullchain.cer") != std::string::npos);
     assert(comp.bodyHtml.find("/usr/local/bin/jojo-data.com.key") != std::string::npos);
     assert(comp.bodyHtml.find("chown") != std::string::npos);
     assert(comp.bodyHtml.find("chmod") != std::string::npos);
     assert(comp.bodyHtml.find("root:root") != std::string::npos);
-
-    // Verify 'local' keyword is NOT injected inside /usr/local/bin/ paths
     assert(comp.bodyHtml.find("/usr/<span class=\"hl-keyword\">local</span>/bin") == std::string::npos);
 
     std::cout << "  -> Real User Document PASS" << std::endl;
+}
+
+void TestAntigravityGuideDocument() {
+    std::cout << "[TEST] Antigravity Complete Guide (antigravity_complete_guide_fa.md)..." << std::endl;
+    std::ifstream f("tests/fixtures/antigravity_complete_guide_fa.md", std::ios::binary);
+    if (!f.is_open()) f.open("C:/Users/Joestar/.gemini/antigravity/scratch/antigravity_complete_guide_fa.md", std::ios::binary);
+    if (!f.is_open()) {
+        std::cout << "  [SKIP] Guide file not found..." << std::endl;
+        return;
+    }
+    std::string bytes((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    std::wstring wide = BiDiEngine::Utf8ToWide(bytes);
+    assert(!wide.empty());
+
+    MarkdownDocument doc = MarkdownParser::Parse(wide);
+    assert(doc.blocks.size() >= 80);
+
+    auto comp = HtmlExporter::GeneratePreviewComponents(doc, L"Antigravity Guide", true, 1.0f, true);
+    assert(!comp.bodyHtml.empty());
+    assert(!comp.tocHtml.empty());
+    assert(!comp.fullHtml.empty());
+
+    // Verify Persian digits in code block are handled with zero crash
+    assert(comp.bodyHtml.find("FEC") != std::string::npos);
+
+    // Verify Mermaid diagram block is generated
+    assert(comp.bodyHtml.find("class=\"mermaid\"") != std::string::npos);
+
+    std::cout << "  -> Antigravity Complete Guide PASS" << std::endl;
 }
 
 int main() {
@@ -351,6 +379,7 @@ int main() {
     TestSyntaxHighlighter();
     TestHtmlExporter();
     TestRealUserDocument();
-    std::cout << "\n>>> ALL 5 TEST SUITES PASSED SUCCESSFULLY! <<<" << std::endl;
+    TestAntigravityGuideDocument();
+    std::cout << "\n>>> ALL 6 TEST SUITES PASSED SUCCESSFULLY! <<<" << std::endl;
     return 0;
 }

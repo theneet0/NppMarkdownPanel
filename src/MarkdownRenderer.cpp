@@ -512,11 +512,12 @@ void MarkdownRenderer::Layout(float clientWidth) {
                         for (size_t c = 0; c < row.cells.size(); ++c) {
                             IDWriteTextLayout* pCellL = nullptr;
                             IDWriteTextFormat* pFmt = row.isHeader ? m_pFormatTableHeader : m_pFormatTable;
+                            float cellLayoutW = (std::max)(10.0f, colW - (12.0f * m_zoom));
                             m_pDWriteFactory->CreateTextLayout(
                                 row.cells[c].text.c_str(),
                                 static_cast<UINT32>(row.cells[c].text.size()),
                                 pFmt,
-                                colW - (12.0f * m_zoom),
+                                cellLayoutW,
                                 5000.0f,
                                 &pCellL
                             );
@@ -699,25 +700,27 @@ void MarkdownRenderer::Layout(float clientWidth) {
                     // Apply inline styling
                     size_t charPos = 0;
                     for (const auto& span : block.inlines) {
-                        DWRITE_TEXT_RANGE range = { static_cast<UINT32>(charPos), static_cast<UINT32>(span.text.size()) };
-                        if (span.type == InlineStyleType::Bold) {
-                            item.pLayout->SetFontWeight(DWRITE_FONT_WEIGHT_BOLD, range);
-                        } else if (span.type == InlineStyleType::Italic) {
-                            item.pLayout->SetFontStyle(DWRITE_FONT_STYLE_ITALIC, range);
-                        } else if (span.type == InlineStyleType::BoldItalic) {
-                            item.pLayout->SetFontWeight(DWRITE_FONT_WEIGHT_BOLD, range);
-                            item.pLayout->SetFontStyle(DWRITE_FONT_STYLE_ITALIC, range);
-                        } else if (span.type == InlineStyleType::Highlight) {
-                            item.pLayout->SetFontWeight(DWRITE_FONT_WEIGHT_SEMI_BOLD, range);
-                            item.pLayout->SetDrawingEffect(m_pBrushH3, range);
-                        } else if (span.type == InlineStyleType::InlineCode || span.type == InlineStyleType::InlineMath) {
-                            item.pLayout->SetFontFamilyName(L"Consolas", range);
-                            item.pLayout->SetDrawingEffect(m_pBrushType, range);
-                        } else if (span.type == InlineStyleType::Strikethrough) {
-                            item.pLayout->SetStrikethrough(TRUE, range);
-                        } else if (span.type == InlineStyleType::Link) {
-                            item.pLayout->SetUnderline(TRUE, range);
-                            item.pLayout->SetDrawingEffect(m_pBrushLink, range);
+                        if (static_cast<UINT32>(charPos) + static_cast<UINT32>(span.text.size()) <= static_cast<UINT32>(block.rawText.size())) {
+                            DWRITE_TEXT_RANGE range = { static_cast<UINT32>(charPos), static_cast<UINT32>(span.text.size()) };
+                            if (span.type == InlineStyleType::Bold) {
+                                item.pLayout->SetFontWeight(DWRITE_FONT_WEIGHT_BOLD, range);
+                            } else if (span.type == InlineStyleType::Italic) {
+                                item.pLayout->SetFontStyle(DWRITE_FONT_STYLE_ITALIC, range);
+                            } else if (span.type == InlineStyleType::BoldItalic) {
+                                item.pLayout->SetFontWeight(DWRITE_FONT_WEIGHT_BOLD, range);
+                                item.pLayout->SetFontStyle(DWRITE_FONT_STYLE_ITALIC, range);
+                            } else if (span.type == InlineStyleType::Highlight) {
+                                item.pLayout->SetFontWeight(DWRITE_FONT_WEIGHT_SEMI_BOLD, range);
+                                item.pLayout->SetDrawingEffect(m_pBrushH3, range);
+                            } else if (span.type == InlineStyleType::InlineCode || span.type == InlineStyleType::InlineMath) {
+                                item.pLayout->SetFontFamilyName(L"Consolas", range);
+                                item.pLayout->SetDrawingEffect(m_pBrushType, range);
+                            } else if (span.type == InlineStyleType::Strikethrough) {
+                                item.pLayout->SetStrikethrough(TRUE, range);
+                            } else if (span.type == InlineStyleType::Link) {
+                                item.pLayout->SetUnderline(TRUE, range);
+                                item.pLayout->SetDrawingEffect(m_pBrushLink, range);
+                            }
                         }
                         charPos += span.text.size();
                     }
