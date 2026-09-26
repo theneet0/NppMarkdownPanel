@@ -179,7 +179,7 @@ void TestSyntaxHighlighter() {
     assert(foundComment);
 
     // Bash / shell tokens
-    std::wstring shCode = L"sudo chmod 0755 /usr/local/bin/gost # Make executable";
+    std::wstring shCode = L"sudo chmod 0755 /usr/local/bin/app_server # Make executable";
     auto shTokens = SyntaxHighlighter::Tokenize(shCode, L"bash");
     assert(!shTokens.empty());
     bool foundShKw = false, foundShNum = false, foundShComment = false;
@@ -188,14 +188,14 @@ void TestSyntaxHighlighter() {
         if (t.type == HighlightTokenType::Number) foundShNum = true;
         if (t.type == HighlightTokenType::Comment) foundShComment = true;
     }
-    // Ensure 'local' in '/usr/local/bin/gost' is NOT treated as a bash keyword
+    // Ensure 'local' in '/usr/local/bin/app_server' is NOT treated as a bash keyword
     for (const auto& t : shTokens) {
         std::wstring tokStr = shCode.substr(t.start, t.length);
         assert(tokStr != L"local");
     }
 
     // Test Persian and Arabic digits in code blocks (ensuring zero hang/infinite loop)
-    std::wstring faNumCode = L"تنظیمات سوکت اسپلاسینگ صفر کپی فعال باشه و پکت لاس تا ۴۰٪ رو با FEC مهار کنه.";
+    std::wstring faNumCode = L"تنظیمات با موفقیت اعمال شد و پکت لاس تا ۴۰٪ مهار گردید.";
     auto faTokens = SyntaxHighlighter::Tokenize(faNumCode, L"text");
     assert(faTokens.empty()); // Language "text" shouldn't tokenize keywords
 
@@ -212,16 +212,16 @@ void TestHtmlExporter() {
     std::wstring md =
         L"# Title\n\n"
         L"Persian: سلام دنیا\n\n"
-        L"- ایران: `/usr/local/bin/ir.yaml`\n\n"
-        L"فایل binary باید `/usr/local/bin/gost` باشد.\n\n"
+        L"- فایل پیکربندی: `/etc/system/config.yaml`\n\n"
+        L"فایل اجرایی باید در `/usr/local/bin/app_server` قرار گیرد.\n\n"
         L"Inline math: $a^2 + b^2 = c^2$ فرمول ریاضی\n\n"
         L"```text\n"
-        L"/usr/local/bin/fullchain.cer\n"
-        L"/usr/local/bin/jojo-data.com.key\n"
+        L"/etc/ssl/certs/server.crt\n"
+        L"/etc/ssl/private/server.key\n"
         L"```\n\n"
         L"```bash\n"
-        L"chown root:root /usr/local/bin/gost\n"
-        L"chmod 0755 /usr/local/bin/gost\n"
+        L"chown root:root /usr/local/bin/app_server\n"
+        L"chmod 0755 /usr/local/bin/app_server\n"
         L"```\n\n"
         L"> [!NOTE]\n"
         L"> Alert test\n\n"
@@ -243,16 +243,16 @@ void TestHtmlExporter() {
     assert(html.find(L"alert-callout") != std::wstring::npos);
 
     // 1. Verify BiDi isolated inline code
-    assert(html.find(L"<code class=\"inline-code\" dir=\"ltr\"><bdi dir=\"ltr\">/usr/local/bin/ir.yaml</bdi></code>") != std::wstring::npos);
-    assert(html.find(L"<code class=\"inline-code\" dir=\"ltr\"><bdi dir=\"ltr\">/usr/local/bin/gost</bdi></code>") != std::wstring::npos);
+    assert(html.find(L"<code class=\"inline-code\" dir=\"ltr\"><bdi dir=\"ltr\">/etc/system/config.yaml</bdi></code>") != std::wstring::npos);
+    assert(html.find(L"<code class=\"inline-code\" dir=\"ltr\"><bdi dir=\"ltr\">/usr/local/bin/app_server</bdi></code>") != std::wstring::npos);
     assert(html.find(L"katex-inline") != std::wstring::npos);
     assert(html.find(L"data-tex=\"a^2 + b^2 = c^2\"") != std::wstring::npos);
     assert(html.find(L"node-a[Step 1]") != std::wstring::npos);
     assert(html.find(L"node-b(Step 2)") != std::wstring::npos);
 
     // 2. Verify code block text is intact and NOT blank
-    assert(html.find(L"/usr/local/bin/fullchain.cer") != std::wstring::npos);
-    assert(html.find(L"/usr/local/bin/jojo-data.com.key") != std::wstring::npos);
+    assert(html.find(L"/etc/ssl/certs/server.crt") != std::wstring::npos);
+    assert(html.find(L"/etc/ssl/private/server.key") != std::wstring::npos);
     assert(html.find(L"chown") != std::wstring::npos);
     assert(html.find(L"chmod") != std::wstring::npos);
 
@@ -297,15 +297,15 @@ void TestHtmlExporter() {
     assert(previewHtml.find("--md-sys-color-primary") != std::string::npos);
     assert(previewHtml.find("https://fonts.") == std::string::npos);
 
-    // 5. Test GeneratePreviewComponents for instant in-place DOM updates
+    // 6. Test GeneratePreviewComponents for instant in-place DOM updates
     auto components = HtmlExporter::GeneratePreviewComponents(doc, L"Preview Title", true, 1.0f, true);
     assert(!components.fullHtml.empty());
     assert(!components.bodyHtml.empty());
     assert(!components.tocHtml.empty());
     assert(components.bodyHtml.find("<!DOCTYPE") == std::string::npos);
-    assert(components.bodyHtml.find("/usr/local/bin/fullchain.cer") != std::string::npos);
+    assert(components.bodyHtml.find("/etc/ssl/certs/server.crt") != std::string::npos);
 
-    // 6. Verify context menu zoom controls exist and reading stats are completely absent
+    // 7. Verify context menu zoom controls exist and reading stats are completely absent
     assert(previewHtml.find("Zoom In") != std::string::npos);
     assert(previewHtml.find("Zoom Out") != std::string::npos);
     assert(previewHtml.find("Reset Zoom") != std::string::npos);
@@ -322,14 +322,13 @@ void TestHtmlExporter() {
     std::cout << "  -> HtmlExporter PASS" << std::endl;
 }
 
-void TestRealUserDocument() {
-    std::cout << "[TEST] Real User Document (gost-systemd-install-fa.md)..." << std::endl;
-    std::ifstream f("tests/fixtures/gost-systemd-install-fa.md", std::ios::binary);
-    if (!f.is_open()) f.open("gost-systemd-install-fa.md", std::ios::binary);
-    if (!f.is_open()) f.open("E:/cert/GOST3/gost-systemd-install-fa.md", std::ios::binary);
+void TestPersianDocument() {
+    std::cout << "[TEST] Persian / RTL Document (sample_persian.md)..." << std::endl;
+    std::ifstream f("tests/fixtures/sample_persian.md", std::ios::binary);
+    if (!f.is_open()) f.open("fixtures/sample_persian.md", std::ios::binary);
     if (!f.is_open()) {
-        std::cout << "  [SKIP] User document file not found in tests/fixtures/ or E:/cert/GOST3/..." << std::endl;
-        return;
+        std::cerr << "  [FAIL] Fixture file sample_persian.md not found!" << std::endl;
+        assert(false);
     }
     std::string bytes((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     std::wstring wide = BiDiEngine::Utf8ToWide(bytes);
@@ -338,45 +337,46 @@ void TestRealUserDocument() {
     MarkdownDocument doc = MarkdownParser::Parse(wide);
     assert(doc.blocks.size() > 0);
 
-    auto comp = HtmlExporter::GeneratePreviewComponents(doc, L"gost-systemd-install-fa.md", true, 1.0f, true);
+    auto comp = HtmlExporter::GeneratePreviewComponents(doc, L"sample_persian.md", true, 1.0f, true);
+    assert(!comp.bodyHtml.empty());
+    assert(comp.bodyHtml.find("class=\"alert-callout") != std::string::npos);
+    assert(comp.bodyHtml.find("table") != std::string::npos);
+    assert(comp.bodyHtml.find("class=\"code-line\" dir=\"rtl\"") != std::string::npos);
+    assert(comp.bodyHtml.find("class=\"code-line\" dir=\"ltr\"") != std::string::npos);
 
-    assert(comp.bodyHtml.find("/usr/local/bin/fullchain.cer") != std::string::npos);
-    assert(comp.bodyHtml.find("/usr/local/bin/jojo-data.com.key") != std::string::npos);
-    assert(comp.bodyHtml.find("chown") != std::string::npos);
-    assert(comp.bodyHtml.find("chmod") != std::string::npos);
-    assert(comp.bodyHtml.find("root:root") != std::string::npos);
-    assert(comp.bodyHtml.find("/usr/<span class=\"hl-keyword\">local</span>/bin") == std::string::npos);
-
-    std::cout << "  -> Real User Document PASS" << std::endl;
+    std::cout << "  -> Persian / RTL Document PASS" << std::endl;
 }
 
-void TestAntigravityGuideDocument() {
-    std::cout << "[TEST] Antigravity Complete Guide (antigravity_complete_guide_fa.md)..." << std::endl;
-    std::ifstream f("tests/fixtures/antigravity_complete_guide_fa.md", std::ios::binary);
-    if (!f.is_open()) f.open("C:/Users/Joestar/.gemini/antigravity/scratch/antigravity_complete_guide_fa.md", std::ios::binary);
+void TestAdvancedDocument() {
+    std::cout << "[TEST] Advanced Features (sample_english.md)..." << std::endl;
+    std::ifstream f("tests/fixtures/sample_english.md", std::ios::binary);
+    if (!f.is_open()) f.open("fixtures/sample_english.md", std::ios::binary);
     if (!f.is_open()) {
-        std::cout << "  [SKIP] Guide file not found..." << std::endl;
-        return;
+        std::cerr << "  [FAIL] Fixture file sample_english.md not found!" << std::endl;
+        assert(false);
     }
     std::string bytes((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     std::wstring wide = BiDiEngine::Utf8ToWide(bytes);
     assert(!wide.empty());
 
     MarkdownDocument doc = MarkdownParser::Parse(wide);
-    assert(doc.blocks.size() >= 80);
+    assert(doc.blocks.size() >= 10);
 
-    auto comp = HtmlExporter::GeneratePreviewComponents(doc, L"Antigravity Guide", true, 1.0f, true);
+    auto comp = HtmlExporter::GeneratePreviewComponents(doc, L"sample_english.md", true, 1.0f, true);
     assert(!comp.bodyHtml.empty());
     assert(!comp.tocHtml.empty());
     assert(!comp.fullHtml.empty());
 
-    // Verify Persian digits in code block are handled with zero crash
-    assert(comp.bodyHtml.find("FEC") != std::string::npos);
+    // Verify task lists
+    assert(comp.bodyHtml.find("class=\"task-checkbox\"") != std::string::npos);
 
     // Verify Mermaid diagram block is generated
     assert(comp.bodyHtml.find("class=\"mermaid\"") != std::string::npos);
 
-    std::cout << "  -> Antigravity Complete Guide PASS" << std::endl;
+    // Verify math expression
+    assert(comp.bodyHtml.find("katex-inline") != std::string::npos);
+
+    std::cout << "  -> Advanced Features PASS" << std::endl;
 }
 
 int main() {
@@ -385,8 +385,8 @@ int main() {
     TestMarkdownParser();
     TestSyntaxHighlighter();
     TestHtmlExporter();
-    TestRealUserDocument();
-    TestAntigravityGuideDocument();
+    TestPersianDocument();
+    TestAdvancedDocument();
     std::cout << "\n>>> ALL 6 TEST SUITES PASSED SUCCESSFULLY! <<<" << std::endl;
     return 0;
 }

@@ -1,63 +1,40 @@
-# NppMarkdownPanel (Native C++ Modern Edition) 🚀
+# NppMarkdownPanel
 
-[![CI_build](https://github.com/theneet0/NppMarkdownPanel/actions/workflows/CI_build.yml/badge.svg)](https://github.com/theneet0/NppMarkdownPanel/actions/workflows/CI_build.yml)
+[![CI Build](https://github.com/theneet0/NppMarkdownPanel/actions/workflows/CI_build.yml/badge.svg)](https://github.com/theneet0/NppMarkdownPanel/actions/workflows/CI_build.yml)
 [![Release](https://img.shields.io/github/v/release/theneet0/NppMarkdownPanel?color=brightgreen)](https://github.com/theneet0/NppMarkdownPanel/releases)
-[![Standard](https://img.shields.io/badge/C%2B%2B-26%20%2F%2023-blue.svg)](https://en.cppreference.com/)
-[![Rendering](https://img.shields.io/badge/Engine-WebView2%20%2B%20Direct2D-purple.svg)](https://docs.microsoft.com/en-us/microsoft-edge/webview2/)
+[![C++ Standard](https://img.shields.io/badge/C%2B%2B-23%20%2F%2026-blue.svg)](https://en.cppreference.com/)
+[![Engines](https://img.shields.io/badge/Engine-WebView2%20%2B%20Direct2D-purple.svg)](https://docs.microsoft.com/en-us/microsoft-edge/webview2/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](License.txt)
 
-> **High-performance, ultra-modern native Markdown preview panel plugin for Notepad++ powered by dual-engine architecture (Evergreen Chromium WebView2 + GPU-accelerated Direct2D fallback), 100% offline assets, intelligent BiDi RTL Persian/Arabic typography, KaTeX math rendering, interactive Mermaid diagrams, responsive non-overlapping TOC sidebar, and custom right-click context menu with zoom controls.**
+A high-performance native Markdown preview plugin for Notepad++. Features a dual-engine architecture combining Evergreen Chromium (WebView2) with a GPU-accelerated Direct2D fallback, full bidirectional (RTL) typography for Persian and Arabic, offline LaTeX math and Mermaid diagrams, and Material Design 3 theming.
 
 ---
 
-## ✨ Key Features & Highlights
+## Features
 
-- 🌐 **Dual-Engine Architecture**:
-  - **Default: Microsoft WebView2 (Evergreen Chromium)**: Modern HTML5/CSS3 rendering, responsive layouts, smooth scrolling, sub-pixel typography, and zero edge-clipping.
-  - **Fallback: Direct2D 1.1 / DirectWrite Native GPU Engine**: Hardware-accelerated native Win32 fallback guaranteeing functionality even on restricted or legacy systems without WebView2.
-- ⚡ **100% Offline & Zero Network Latency**:
-  - Built-in offline MathML engine compatible with KaTeX/LaTeX syntax.
-  - Procedural offline SVG Mermaid diagram generation for flowcharts and sequence graphs.
-  - Complete elimination of external Google Fonts, CDN scripts, and internet dependencies. Instant preview loading under all firewall and offline network conditions.
-- 🔍 **Interactive Right-Click Context Menu & Zoom Controls**:
-  - Clean context menu tailored specifically for markdown previewing:
-    - 🔍 **Zoom In** (`Ctrl + +` / `Ctrl + =`)
-    - 🔍 **Zoom Out** (`Ctrl + -`)
-    - 🔍 **Reset Zoom 100%** (`Ctrl + 0`)
-    - ✂️ **Copy Selection** (`Ctrl + C`)
-    - 🔍 **Find in Document** (`Ctrl + F`)
-    - 📑 **Outline / Table of Contents**
-    - 🌓 **Toggle Dark / Light Theme**
-    - 🔄 **Toggle Caret Sync Scroll**
-    - 🌐 **Smart BiDi (RTL / LTR)**
-    - 📋 **Copy Full Rendered HTML**
-    - 💾 **Save As HTML...**
-    - 📄 **Print / Save as PDF**
-- 📑 **Non-Overlapping Responsive TOC Sidebar**:
-  - Fixed-layout sliding Table of Contents drawer with smooth anchor navigation, active section indicators, and semi-transparent backdrop overlay.
-  - Dynamically adapts to panel width to prevent content occlusion.
-- 🔎 **Real-Time In-Page Search**:
-  - Interactive search overlay (`Ctrl+F`) with match counter (`[1/5]`), cycle navigation (`Enter` / `Shift+Enter`), smooth scrolling, and keyword highlights.
-- 📐 **KaTeX / LaTeX Mathematical Expressions**:
-  - Fast inline math expressions (`$E=mc^2$`) and display equation blocks (`$$\sum_{i=1}^n i = \frac{n(n+1)}{2}$$`).
-- 📊 **Interactive Mermaid.js Diagram Support**:
-  - Native offline procedural SVG rendering for flowcharts, sequence diagrams, mindmaps, and block graphs inside ````mermaid code fences.
-- 🎨 **Material Design 3 (Material You) Theme**:
-  - Full Material 3 tonal elevation and color palette (Surface, Surface-Container, Primary, Secondary, Outline-Variant) in both Light and Dark modes.
-  - Minimalist, distraction-free card architecture: removed artificial macOS window dots in favor of clean M3 language pill badges and interactive copy buttons.
-  - Native M3 styling for Alert Callouts (Note, Tip, Important, Warning, Caution), Blockquotes, Tables, and Context Menus.
-- 🌍 **Intelligent BiDi RTL & Persian/Arabic Typography**:
-  - Automatic paragraph direction detection (RTL / LTR) via custom native `BiDiEngine`.
-  - Line-by-line bidirectional isolation (`dir="rtl"` / `dir="ltr"`) within code blocks to ensure mixed Persian and English commands render in correct reading order without reversed characters or misplaced punctuation.
+- **Dual-Engine Rendering**:
+  - **Primary: Microsoft WebView2 (Chromium)**: Modern HTML5/CSS3 rendering with sub-pixel typography, smooth scrolling, and dynamic layout.
+  - **Fallback: Direct2D 1.1 / DirectWrite**: Native GPU-accelerated hardware rendering fallback for environments without WebView2.
+- **Material Design 3 Theming**:
+  - Clean, minimal cards and tonal palettes in both Light and Dark modes.
+  - Minimal code block cards with syntax language pill badges and 1-click clipboard copy.
+  - Native M3 styling for alert callouts (`[!NOTE]`, `[!TIP]`, `[!WARNING]`), blockquotes, and tables.
+- **Bidirectional (RTL) Typography & Persian/Arabic Support**:
+  - Automatic paragraph direction detection via native `BiDiEngine`.
+  - Line-by-line BiDi isolation (`dir="rtl"` / `dir="ltr"`) within code blocks to ensure mixed Persian and English commands render in correct reading order.
   - Inline code isolation prevents bidirectional punctuation corruption and text reversal.
-  - Optimized typography with font fallbacks (`Vazirmatn`, `Segoe UI`, `Tahoma`).
-- 💻 **Minimalist Material 3 Code Blocks with 1-Click Copy**:
-  - Clean M3 tonal container cards with syntax language pill badge and SVG copy button with instant checkmark feedback.
-  - Full clipboard fidelity preserving exact line breaks and code indentation.
-- ☑️ **Bidirectional 2-Way Task List Sync**:
-  - Clicking `[ ]` task checkboxes in the preview window immediately toggles the corresponding `[x]` markdown text in the active Notepad++ Scintilla document.
-- 🖨️ **HTML Export & PDF Printing**:
-  - One-click clipboard copy of complete styled HTML, standalone HTML export, and native print dialog integration (Save to PDF).
+- **LaTeX Math & Mermaid Diagrams**:
+  - Built-in offline MathML engine for inline math (`$E=mc^2$`) and display equations (`$$\sum_{i=1}^n i$$`).
+  - Offline SVG rendering for flowcharts and sequence graphs within ````mermaid code blocks.
+  - 100% offline with zero CDN dependencies or external web requests.
+- **Navigation & Search**:
+  - Responsive, non-overlapping Table of Contents (TOC) drawer.
+  - Real-time in-page search (`Ctrl + F`) with match counting, cycle navigation, and keyword highlights.
+- **Editor Synchronization**:
+  - Bidirectional caret and scroll tracking with active Scintilla document.
+  - 2-way task list synchronization: clicking checkboxes in preview toggles `[x]` in the active editor.
+- **Context Menu & Controls**:
+  - Right-click context menu with zoom controls (`Ctrl++`, `Ctrl+-`, `Ctrl+0`), theme toggle, copy full HTML, standalone HTML export, and PDF printing.
 
 ---
 
