@@ -288,6 +288,13 @@ void TestHtmlExporter() {
     assert(previewHtml.find("cdn.jsdelivr.net") == std::string::npos);
     assert(previewHtml.find("http://") == std::string::npos);
     assert(previewHtml.find("https://cdn.") == std::string::npos);
+
+    // 5. Verify Material 3 tokens, minimal boxes and zero macOS controls
+    assert(html.find(L"mac-controls") == std::wstring::npos);
+    assert(html.find(L"mac-dot") == std::wstring::npos);
+    assert(html.find(L"class=\"code-line\" dir=\"ltr\"") != std::wstring::npos);
+    assert(previewHtml.find("--md-sys-color-surface") != std::string::npos);
+    assert(previewHtml.find("--md-sys-color-primary") != std::string::npos);
     assert(previewHtml.find("https://fonts.") == std::string::npos);
 
     // 5. Test GeneratePreviewComponents for instant in-place DOM updates

@@ -42,12 +42,18 @@
   - Fast inline math expressions (`$E=mc^2$`) and display equation blocks (`$$\sum_{i=1}^n i = \frac{n(n+1)}{2}$$`).
 - 📊 **Interactive Mermaid.js Diagram Support**:
   - Native offline procedural SVG rendering for flowcharts, sequence diagrams, mindmaps, and block graphs inside ````mermaid code fences.
+- 🎨 **Material Design 3 (Material You) Theme**:
+  - Full Material 3 tonal elevation and color palette (Surface, Surface-Container, Primary, Secondary, Outline-Variant) in both Light and Dark modes.
+  - Minimalist, distraction-free card architecture: removed artificial macOS window dots in favor of clean M3 language pill badges and interactive copy buttons.
+  - Native M3 styling for Alert Callouts (Note, Tip, Important, Warning, Caution), Blockquotes, Tables, and Context Menus.
 - 🌍 **Intelligent BiDi RTL & Persian/Arabic Typography**:
   - Automatic paragraph direction detection (RTL / LTR) via custom native `BiDiEngine`.
+  - Line-by-line bidirectional isolation (`dir="rtl"` / `dir="ltr"`) within code blocks to ensure mixed Persian and English commands render in correct reading order without reversed characters or misplaced punctuation.
   - Inline code isolation prevents bidirectional punctuation corruption and text reversal.
   - Optimized typography with font fallbacks (`Vazirmatn`, `Segoe UI`, `Tahoma`).
-- 💻 **macOS-Style Code Blocks with 1-Click Copy**:
-  - Clean cards featuring macOS traffic light controls, language badges, and one-click copy with feedback notification.
+- 💻 **Minimalist Material 3 Code Blocks with 1-Click Copy**:
+  - Clean M3 tonal container cards with syntax language pill badge and SVG copy button with instant checkmark feedback.
+  - Full clipboard fidelity preserving exact line breaks and code indentation.
 - ☑️ **Bidirectional 2-Way Task List Sync**:
   - Clicking `[ ]` task checkboxes in the preview window immediately toggles the corresponding `[x]` markdown text in the active Notepad++ Scintilla document.
 - 🖨️ **HTML Export & PDF Printing**:
